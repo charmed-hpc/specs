@@ -5,19 +5,19 @@ title: release policy and notes for Charmed Slurm
 
 # Abstract
 
-This spec details the release policy and release notes format for Charmed Slurm releases. Charmed Slurm contains the Slurm workload manager and related infrastructure components such as observability and scaling. 
+This spec details the release policy and release notes format for Charmed Slurm releases. Charmed Slurm contains the Slurm workload manager and related infrastructure components such as observability and scaling.
 
 # Rationale
 
-For a given product, a consistent release policy and release notes format is necessary to update users and developers 
-on the updates and changes to the product. Different products, both Canonical and upstream, have a variety of release 
-policies and cadances, and requires a plan of action to best align Charmed HPC's releases. 
+For a given product, a consistent release policy and release notes format is necessary to update users and developers
+on the updates and changes to the product. Different products, both Canonical and upstream, have a variety of release
+policies and cadances, and requires a plan of action to best align Charmed HPC's releases.
 
 # Specification
 
 ## Release Cadence
 
-Current release cadence will be based around feature implementation and upstream Slurm releases, which happen twice a year. Exact timing will vary, and all major releases will be announced. 
+Current release cadence will be based around feature implementation and upstream Slurm releases, which happen twice a year. Exact timing will vary, and all major releases will be announced.
 
 
 ### Cadence considerations
@@ -54,16 +54,16 @@ Current release cadence will be based around feature implementation and upstream
   * Corrensponding commit hash is included in the charm channel release
 * No breaking changes should be made to integrations, configuration options, or actions in a stable track of a charm
   * To introduce breaking changes, a new track should be created
-  
+
 * 'stable' vs 'edge' for slurm charms
-  * how to handle when one charm updates but not others? 
+  * how to handle when one charm updates but not others?
 
 ## Documentation
 
 * User is expected to use the charm version that comes with a specific release
   * Cannot guarantee 'Franken'-charm collections
   * If a user requirement necessitates versions that are not from the same release, they should open an issue on Github
-(or Support Discussion) and contact the team 
+(or Support Discussion) and contact the team
 
 ## Support Timeframe
 
@@ -78,6 +78,20 @@ Each major release will be supported for 18 months. For major commercial offerin
 ### Security Patches
 
 * Pushed to edge, release after standard testing process
+
+## Supported Artifacts
+
+<!-- List of supported artifacts with source code links and issue tracker refs
+ -->
+
+### Release Structure
+
+<!-- Table of corresponding pieces and commit/channel/tag/etc for each:
+
+* E.g. stable release of the Slurm charms are published to 25.04/stable on Charmhub
+  * ^ Mirror this bit in the release notes. E.g. how do you actually pull Charmed Slurm 25.04
+* PPA to get supported Slurm packages.
+* Any Terraform plans for reference deployment (maybe, homies could just pull from the correct channel) -->
 
 ## Examples
 
