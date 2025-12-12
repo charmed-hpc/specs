@@ -1,12 +1,13 @@
-| Index          | HPC049                                                           |                                                                                                                |             |
-|:---------------|:-----------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------|:------------|
-| Title          | Replace `node-configured` action                                 |                                                                                                                |             |
-| **Type**       | **Author(s)**                                                    | **[Status](https://docs.google.com/document/d/1lStJjBGW7lyojgBhxGLUNnliUocYWjAZ1VEbbVduX54/edit?usp=sharing)** | **Created** |
-| Implementation | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com)        | Pending Review                                                                                                 | 2025-10-30  |
-|                | **Reviewer(s)**                                                  | **Status**                                                                                                     | **Date**    |
-|                | [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) | Accepted                                                                                                       | 2025-11-04  |
-|                | [Julián Espina Del Ángel](mailto:julian.espina@canonical.com)    | Accepted                                                                                                       | 2025-11-04  |
-|                | [James Beedy](mailto:james@vantagecompute.ai)                    | Pending Review                                                                                                 | 2025-12-10  |
+| Index          | HPC049                                                           |                   |             |
+|:---------------|:-----------------------------------------------------------------|:------------------|:------------|
+| Title          | Replace `node-configured` action                                 |                   |             |
+| **Type**       | **Author(s)**                                                    | **Status** 		| **Created** |
+| Implementation | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com)        | Pending Review    | 2025-10-30  |
+|                | **Reviewer(s)**                                                  | **Status**        | **Date**    |
+|                | [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) | Accepted          | 2025-11-04  |
+|                | [Julián Espina Del Ángel](mailto:julian.espina@canonical.com)    | Accepted          | 2025-11-04  |
+|                | [James Beedy](mailto:james@vantagecompute.ai)                    | Accepted          | 2025-12-11  |
+|                | [Ashley Cliff](mailto:ashley.cliff@canonical.com)                | Accepted			| 2025-12-12  |
 
 # Abstract
 
@@ -136,7 +137,8 @@ of a restarted node in Slurm's configured `StateSaveLocation`.
 
 #### Persisting compute node state across machine restarts
 
-Compute nodes that are rebooted using the `juju-reboot` command or with another cloud-provided mechanism will automatically be
+Compute nodes that are rebooted using the `juju-reboot` command or 
+with another cloud-provided mechanism will automatically be
 brought back in the "down" state. There is no guarantee that compute
 nodes were rebooted for a good reason, such as applying driver or
 kernel updates, so compute nodes should be kept out of the allocatable
@@ -165,7 +167,7 @@ The `_on_start` hook can return the compute node to service or set a
 different default state and reason if the slurmd service has been
 enabled by systemd and the slurmctld integration is ready.
 
-The Charmed HPC cluster operator will still need to reset the state
+The Charmed HPC cluster administrator will still need to reset the state
 they applied using the `set-node-state` action unless they updated the
 proposed `default-state` and `default-reason` configurations to reflect
 that state and reason.
@@ -262,7 +264,4 @@ juju config slurmd default-reason="Machine rebooted"
 | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Drafting | 2025-10-30 | Start initial draft.                                                                                                                                               |
 | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Pending Review | 2025-11-04 | Submitted for initial review to [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) and [Julián Espina Del Ángel](mailto:julian.espina@canonical.com) |
 | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Pending Review | 2025-11-04 | Remove proposed `mark-\*` actions, rename `set-state` to `set-node-state`                                                                                          |
-
-
-
-
+| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Accepted       | 2025-12-12 | Specification accepted |
