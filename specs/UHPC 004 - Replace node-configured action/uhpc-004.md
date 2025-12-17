@@ -158,8 +158,8 @@ def _on_start(self, _: ops.StartEvent) -> None:
         scontrol(
             "update",
             f"nodename={self.unit.name}",
-            f"state={self.config.get('default-state')}",
-            f"reason={self.config.get('default-reason')}",
+            f"state={self.config.get('default_node_state')}",
+            f"reason={self.config.get('default_node_reason')}",
         )
 ```
 
@@ -169,7 +169,7 @@ enabled by systemd and the slurmctld integration is ready.
 
 The Charmed HPC cluster administrator will still need to reset the state
 they applied using the `set-node-state` action unless they updated the
-proposed `default-state` and `default-reason` configurations to reflect
+proposed `default_node_state` and `default_node_reason` configurations to reflect
 that state and reason.
 
 ## Proposed configuration options
@@ -180,44 +180,44 @@ Slurm in the "down" state with the reason "New node." These
 configuration options provide the same behavior, but allow Charmed HPC
 cluster operators to set other defaults.
 
-#### `default-state`
+#### **`default_node_state`**
 
-The `default-state` configuration option will be used to set the default
+The `default_node_state` configuration option will be used to set the default
 state of a compute node when it is first deployed or its underlying
 machine is rebooted. For example, to have new compute nodes enlisted in
 the "idle" state when a new slurmd application is deployed:
 
 ```shell
-juju deploy slurmd -n 100 --config default-state="idle"
+juju deploy slurmd -n 100 --config default_node_state="idle"
 ```
 
 To replicate the current behavior of the slurmd charm:
 
 ```shell
-juju deploy slurmd -n 100 --config default-state="down"
+juju deploy slurmd -n 100 --config default_node_state="down"
 ```
 
-The default value for `default-state` will be "down" as it prevents
+The default value for `default_node_state` will be "down" as it prevents
 operators from retroactively needing to prevent new compute nodes from
 receiving jobs in a scaling partition. Charmed HPC power users can set
-`default-state` to "idle" for brand-new deployments to save time.
+`default_node_state` to "idle" for brand-new deployments to save time.
 
-#### `default-reason`
+#### **`default_node_reason`**
 
-The `default-reason` configuration option will be used to set the
+The `default_node_reason` configuration option will be used to set the
 default reason when a node is first deployed or its underlying machine
 is rebooted. For example, to have new compute nodes have "New node"
 set as the reason why the node is enlisted as "down" by default:
 
 ```shell
 juju deploy slurmd \
-  --config default-state="down" \
-  --config default-reason="New node."
+  --config default_node_state="down" \
+  --config default_node_reason="New node."
 ```
 
 `scontrol` does not let `Reason` be empty by default. However, an
 operator may not have a default reason configured. The default value
-for `default-reason` will be an empty string ("") that will evaluate
+for `default_node_reason` will be an empty string ("") that will evaluate
 to "n/a" for "Not Available" when applying the node configuration
 update:
 
@@ -229,18 +229,18 @@ def _on_start(self,_: ops.StartEvent) -> None:
         scontrol(
             "update",
             f"nodename={self.unit.name}",
-            f"reason={self.config.get('default-reason') if ... else 'n/a'}",
+            f"reason={self.config.get('default_node_reason') if ... else 'n/a'}",
         )
 ```
 
 The `_on_start` hook will be run each time the machine is rebooted, so
-the operator will need to modify the `default-reason` configuration
+the operator will need to modify the `default_node_reason` configuration
 option after the initial cluster deployment:
 
 ```shell
 # Assume there is an existing Charmed HPC deployment.
 
-juju config slurmd default-reason="Machine rebooted"
+juju config slurmd default_node_reason="Machine rebooted"
 ```
 
 # Further Information
@@ -259,9 +259,10 @@ juju config slurmd default-reason="Machine rebooted"
 
 # Spec History and Changelog
 
-| Author(s) | Status | Date | Comment                                                                                                                                                            |
-| :---- | :---- | :---- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Drafting | 2025-10-30 | Start initial draft.                                                                                                                                               |
+| Author(s)                                                 | Status         | Date       | Comment                                                                                                                                                            |
+|:----------------------------------------------------------|:---------------|:-----------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Drafting       | 2025-10-30 | Start initial draft.                                                                                                                                               |
 | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Pending Review | 2025-11-04 | Submitted for initial review to [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) and [Julián Espina Del Ángel](mailto:julian.espina@canonical.com) |
 | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Pending Review | 2025-11-04 | Remove proposed `mark-\*` actions, rename `set-state` to `set-node-state`                                                                                          |
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Accepted       | 2025-12-12 | Specification accepted |
+| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Accepted       | 2025-12-12 | Specification accepted                                                                                                                                             |
+| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Updated        | 2025-12-17 | Rename proposed configurations options to `default_node_state` and `default_node_reason`                                                                           |
