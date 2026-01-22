@@ -118,59 +118,12 @@ the `/` character interferes with the cgroup hierarchy created by systemd for sl
 ```python3
 # Assume `SlurmdCharm` is fully defined.
 
-def _on_slurmctld_ready(self, event: SlurmctldReadyEvent) -> None:
+def _on_install(self, event: ops.InstallEvent) -> None:
+    # Assume slurmd installation on machine completes successfully.
+    ...
+   
     self.slurmd.name = self.unit.name.replace("/", "-")
 ```
-
-## Handling node name collisions
-
-Application names must be unique when deployed in the same model, but applications
-can share the same name if they are deployed in separate models or with
-different controllers. This can cause challenges when using the unit names as the
-compute nodes' node name as Slurm requires node names to be unique. The integration 
-ID number can be used to circumvent this issue. 
-
-The slurmctld charm uses "Include" configuration files to store partition 
-information. This mechanism can be updated to provide the integration ID number
-in the include file name suffix:
-
-```python
-# Assume `SlurmdCharm` is fully defined.
-
-def _on_slurmctld_ready(self, event: SlurmdReadyEvent) -> None:
-    data = self.slurmd.get_compute_data(event.relation.id)
-    name = data.partition.partition_name
-    include = f"slurm.conf.{event.relation.id}.{name}"
-```
-
-Now, by including the integration ID number in the include file name, the slurmctld
-charm can check if a new partition collides with an existing partition. If a
-partition name collision is detected, the `_on_slurmd_ready` event handler will raise
-a `StopCharm` exception with a blocked status message:
-
-```python
-# Assume `SlurmdCharm` is fully defined.
-
-def _on_slurmctld_ready(self, event: SlurmdReadyEvent) -> None:
-    data = self.slurmd.get_compute_data(event.relation.id)
-    name = data.partition.partition_name
-    includes = self.slurmctld.config.includes
-    
-    for include in includes:
-        integration_id, partition = include.rsplit(".")[-2:]
-        if partition == name and integration_id != event.relation.id:
-            raise StopCharm(
-                ops.BlockedStatus(
-                    f"Cannot register new partition '{name}'. "
-                    "Conflicts with an existing partition."   
-                )
-            )
-```
-
-The `SlurmdReadyEvent` will not be deferred if there is a partition name collision as there 
-is no additional data to wait for from the conflicting slurmd application. The cluster
-administrator can remove the integration between the Slurm controller `slurmctld` and
-the colliding partition to fix the issue and remove the blocked status message.
 
 # Further Information
 
