@@ -101,7 +101,7 @@ The `mail` module defines three functions:
   * `smtpPassword`
   * `emailFromName`
 
-with values passed to the function via `**kwargs`. The `slurm-mail.conf` file uses standard "ini" syntax so `configparser` from the Python default library is used to perform these modifications.
+with a context manager used to allow for update of any combination of these options. The `slurm-mail.conf` file uses standard "ini" syntax so `configparser` from the Python default library is used to perform these modifications.
 
 The slurmctld charm observes events:
 
