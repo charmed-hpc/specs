@@ -1,21 +1,17 @@
-| Index          | UHPC005                                                          |                   |             |
-|:---------------|:-----------------------------------------------------------------|:------------------|:------------|
-| Title          | Use unit name as node name                                       |                   |             |
-| **Type**       | **Author(s)**                                                    | **Status** 		     | **Created** |
-| Implementation | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com)        | Pending Review    | 2025-12-17  |
-|                | **Reviewer(s)**                                                  | **Status**        | **Date**    |
-|                | [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) | Pending Review    | 2026-01-05  |
-|                | [Julián Espina Del Ángel](mailto:julian.espina@canonical.com)    | Pending Review    | 2026-01-05  |
-|                | [James Beedy](mailto:james@vantagecompute.ai)                    | Pending Review    | 2026-01-05  |
-|                | [Ashley Cliff](mailto:ashley.cliff@canonical.com)                | Pending Review			 | 2026-01-05  |
+---
+index: UHPC005
+title: Use unit name as node name
+---
 
-# Abstract
+# Use unit name as node name
+
+## Abstract
 
 This specification proposes modifying the existing slurmd charm to use assigned
 unit names instead of machine hostnames as the node name for registered compute
 nodes in Charmed HPC.
 
-## Terms
+### Terms
 
 There are several terms used in this specification to refer to different components of
 Juju and Slurm. Definitions for these terms are provided below to help the reader
@@ -33,13 +29,13 @@ identify whether a component is provided by Juju or Slurm:
 5. Unit name
    1. The name of a deployed slurmd charm instance.
 
-# Rationale
+## Rationale
 
 The slurmd charm currently uses units' underlying machine hostnames as the node
 name for compute nodes in Charmed HPC. While technically valid, using units'
 machine hostname as their node name in Slurm presents several usability challenges.
 
-### **Associating machine hostnames with slurmd units**
+#### **Associating machine hostnames with slurmd units**
 
 It's difficult to associate a machine hostname with a specific unit quickly.
 Units are associated with a machine ID number in the output of `juju status`.
@@ -71,7 +67,7 @@ performing operations with `scontrol` or `sacctmgr`.
 Also, a compute node name such as `slurmd-0` is easier for an administrator to recall
 from memory than the name `juju-xjh620-127`.
 
-### **Machine hostname assignment is non-deterministic**
+#### **Machine hostname assignment is non-deterministic**
 
 There's no guarantee that a slurmd unit will be assigned a specific machine by Juju.
 This non-deterministic behavior makes it difficult to use Slurm's nodename syntax
@@ -89,13 +85,13 @@ to a different application. The node name range then becomes the less user-frien
 Given these issues, using compute nodes' unit name rather than their hostname
 in Slurm will improve the overall user experience for Charmed HPC.
 
-# Specification
+## Specification
 
 The sections below outline the proposed implementation for using a unit name rather
 than a machine hostname for registered compute nodes, and identify workarounds for
 using unit names in cross-model and cross-controller integrations.
 
-## Setting the node name to the unit name
+### Setting the node name to the unit name
 
 The `-N` flag can be used with slurmd to set a custom node name when starting the
 slurmd service:
@@ -109,7 +105,7 @@ can be used with Charmed HPC since its Slurm packages are built with the
 `--enable-multiple-slurmd` option enabled. This option will be added as a modifiable 
 property on `SlurmdManager` that will be set in _/etc/default/slurmd_.
 
-### Considerations
+#### Considerations
 
 Unit names, like `slurmd/0` for example, cannot be used as the node name exactly because 
 the `/` character interferes with the cgroup hierarchy created by systemd for slurmd. 
@@ -125,16 +121,8 @@ def _on_install(self, event: ops.InstallEvent) -> None:
     self.slurmd.name = self.unit.name.replace("/", "-")
 ```
 
-# Further Information
+## Further Information
 
 1. [`slurmd` manpage](https://manpages.ubuntu.com/manpages/resolute/en/man8/slurmd.8.html)
 2. [Issue #83 on `charmed-hpc/slurm-charms`](https://github.com/charmed-hpc/slurm-charms/issues/83)
 3. [`slurm.conf` manpage](https://slurm.schedmd.com/slurm.conf.html#SECTION_DESCRIPTION)
-
-# Spec History and Changelog
-
-| Author(s)                                                 | Status         | Date       | Comment                 |
-|:----------------------------------------------------------|:---------------|:-----------|:------------------------|
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Drafting       | 2025-12-17 | Start initial draft.    |
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Pending Review | 2026-01-06 | Submit draft for review |
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Pending Review | 2026-01-07 | Address review feedback |

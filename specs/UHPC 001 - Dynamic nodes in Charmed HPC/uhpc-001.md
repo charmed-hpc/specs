@@ -1,7 +1,9 @@
 ---
+index: UHPC001
 title: Dynamic compute nodes in Charmed HPC
-
 ---
+
+# Dynamic compute nodes in Charmed HPC
 
 ## Abstract
 
@@ -21,7 +23,7 @@ Now, if you don't want to use dynamic nodes, you can still configure your Slurm 
  
    On the compute nodes, all the `slurmd` systemd service definitions are wrapped with a custom service override named _service.py_. This service override is required because there's a delay between when the compute node shares its hardware configuration with the controller and when the compute node is inserted into the _slurm.conf_ file, the `slurmd` service cannot immediately start. _service.py_ is used as a workaround for this delay by starting the `slurmd` service with "brute-force" in a background process outside of charm execution; it attempts to start the `slurmd` service over the course of 10 minutes in 30 second intervals, but this degardes the developers' and triagers' experience as `systemctl start slurmd` will hold control of the user's shell for up to 10 minutes. The wrapper script also obscures how the `slurmd` is actually managed by the charm, and the wrapper can make it difficult to debug issues with `slurmd` since there's multiple layers that need to be worked through to actually pinpoint where problems are introduced.
 
-    Using the _service.py_ wrapper also requires the `slurmd` to be converted to a forking daemon &mdash; `Type=forking` &mdash; which is considered a "relic of a bygone age" by `systemd` as this option is only used by traditional services that fork themselves upon start-up. This also creates additional complexity as a PID file is now required to track the `slurmd` service.
+   Using the _service.py_ wrapper also requires the `slurmd` to be converted to a forking daemon &mdash; `Type=forking` &mdash; which is considered a "relic of a bygone age" by `systemd` as this option is only used by traditional services that fork themselves upon start-up. This also creates additional complexity as a PID file is now required to track the `slurmd` service.
 
 3. __Wasted compute node resources__
 
@@ -454,11 +456,3 @@ Expected work items include:
 
 1. [Slurm dynamic nodes documentation](https://slurm.schedmd.com/dynamic_nodes.html)
 2. [Charmed HPC benchmarks repository](https://github.com/charmed-hpc/charmed-hpc-benchmarks)
-
-## Spec History and Changelog
-
-| Date            | Status       | Author(s)           | Comment                                                                                                                       |
-| --------------- | ------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| June 18th, 2025 | Drafting     | Jason C. Nucciarone | Initial draft                                                                                                                 |
-| June 18th, 2025 | Needs review | Jason C. Nucciarone | Initial draft completed                                                                                                       |
-| June 20th, 2025 | Needs review | James Beedy         | Made comments on using `event.app.name` for the partition name, and proposed adding an action for "brute-force" node draining |

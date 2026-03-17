@@ -1,13 +1,15 @@
 ---
+index: UHPC002
 title: slurmctld high-availability implementation in Charmed HPC
-
 ---
 
-# Abstract
+# slurmctld high-availability implementation in Charmed HPC
+
+## Abstract
 
 This spec details the implementation of high availability (HA) in the `slurmctld` charmed operator used for the Slurm controller in a Charmed HPC cluster deployment. Support for the `filesystem-client` charm has been added to allow for storage of Slurm controller checkpoint data, also known as the StateSaveLocation data, in a shared file system mounted by all controller instances, a prerequisite for the native `slurmctld` active-passive HA setup. Slurm configuration data is also made available via this file system. Related charms: `sackd, slurmd, slurmrestd,` and `slurmdbd` have been updated to support multiple controller addresses. In addition to the final implementation. details of the other approaches considered, including proofs of concept developed, are provided.
 
-# Rationale
+## Rationale
 
 From the [slurmctld documentation](https://slurm.schedmd.com/slurmctld.html):
 
@@ -15,7 +17,7 @@ From the [slurmctld documentation](https://slurm.schedmd.com/slurmctld.html):
 
 At present, the `slurmctld` charm in Charmed HPC does not support backup instances, allowing only a single `slurmctld` controller unit to be operational at any one time. This creates a single point of failure for a cluster deployment. To address this, the charms must be extended with support for `slurmctld` HA.
 
-# Specification
+## Specification
 
 Multiple `slurmctld` instances are supported natively using the [HA functionality within Slurm](https://slurm.schedmd.com/quickstart_admin.html#HA). The architecture is active-passive: a primary is configured with one or more backup controllers on standby. Scaling up the number of controllers does not allow for more requests to be served. A backup takes over if the primary controller fails, that is, if the controller does not respond to a request within 120 seconds (configurable via the [SlurmctldTimeout parameter](https://slurm.schedmd.com/slurm.conf.html)).
 
@@ -40,7 +42,7 @@ Slurmctld(backup3) at juju-9cf56a-15 is UP
 
 In this setup, the unit with hostname `juju-9cf56a-13` runs as the initial controller serving requests. On primary failure, the first backup controller, `juju-9cf56a-16`, takes over. For subsequent failures, the remaining backups take over in order.
 
-## Performant sharing of StateSaveLocation data
+### Performant sharing of StateSaveLocation data
 
 An HA setup has the following prerequisites:
 
@@ -65,7 +67,7 @@ An HA setup has the following prerequisites:
 
 **StateSaveLocation data must either exist on shared storage independent from any instance or be replicated on storage local to each instance**. Suggestions from the [slurm-users mailing list](https://groups.google.com/g/slurm-users/c/XkLznfHw_sw/m/I30UpmzSBgAJ) include [DRBD](https://linbit.com/drbd/) and rsync: “you can use the controller local disk for StateSaveLocation and place a cron job (on the same node or somewhere else) to take that data out via e.g. rsync”. The capacity of StateSaveLocation varies depending on cluster size and utilization. For a point of comparison, [one mailing list message](https://groups.google.com/g/slurm-users/c/aEgBpfiK8_0/m/Srapnf2-BgAJ) states “We have just over 400 nodes and the StateSaveLocation directory has \~600MB of data”. 
 
-### Implemented approach: filesystem-client charm integration
+#### Implemented approach: filesystem-client charm integration
 
 To allow for flexibility in the shared file system, support for the [`filesystem-client` charm](https://github.com/charmed-hpc/filesystem-charms) has been implemented. This enables the user to integrate with the file system of their choice, e.g. their own CephFS deployment, a cloud-specific managed file system, or another that meets their performance and capacity requirements.
 
@@ -73,7 +75,7 @@ Using the local disk for StateSaveLocation data, without the `filesystem-client`
 
 The `use-network-state` option must be set to `True` at `slurmctld` deployment time for HA to function. When set to `True`, the charm blocks until `/var/lib/slurm/checkpoint` is mounted (specifically until [`Path.is_mount`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.is_mount) returns `True`). The charm leader then generates the JWT key, the auth key, and all configuration files while peers defer until these files appear in the shared storage.
 
-## Charm interface and logic changes
+### Charm interface and logic changes
 
 Changes to the Slurm charmed operators are necessary to support an HA configuration as the `slurmctld` operator has, until now, been developed under the assumption that only a single unit would be in operation at any one time.
 
@@ -81,13 +83,13 @@ Updates to the interfaces for `slurmd, sackd, slurmrestd,` and `slurmdbd` are re
 
 The `slurmctld` charm must coordinate configuration files such as slurm.conf, gres.conf, acct\_gather.conf, and all others necessary for `slurmctld` operation to ensure the files are available to the primary and all backup units. Similarly, the JWT and cluster authentication keys must be shared securely with all units for failover to be possible.
 
-### Implemented approach: use of shared file system for configuration
+#### Implemented approach: use of shared file system for configuration
 
 The JWT key is already stored in `/var/lib/slurm/checkpoint` in the latest release of `slurmctld`, hence is already available to all units via the shared file system used for the StateSaveLocation. This approach has been expanded upon \- the auth key and configuration files (`slurm.conf`, `gres.conf`, `acct_gather.conf`, etc.) are now added to this location by relocating `/etc/slurm/` to the shared storage. The original `/etc/slurm/` is replaced with a symlink to `/var/lib/slurm/checkpoint/etc-slurm` so all `slurmctld` instances have a coherent view of all necessary files.
 
 To avoid data loss, any existing `/etc/slurm/` is backed up to `/etc/slurm_[timestamp]` on the unit. To prevent peers from reading partially written configuration files, the latest version of `slurmutils` now makes atomic updates.
 
-### `slurmctld` charm changes
+#### `slurmctld` charm changes
 
 The `Install` hook no longer generates keys or start services; it only performs package install operations. Key generation and service starts have been moved to the `Start` hook both to allow for the `filesystem-client` mount to be in place and for a more logical separation of concerns. The setting of the `cluster_name` has been moved to the peer `relation-creation` event to simplify `Start`.
 
@@ -105,7 +107,7 @@ A `get_controller_status()` method has been added which performs an `scontrol pi
 
 The `auth_key` and `jwt_key` are no longer part of the charm stored state. Each access now goes through the `hpclibs` interface which retrieves the key value from the file on disk. This ensures a consistent key is returned across all `slurmctld` units.
 
-### Other charm changes
+#### Other charm changes
 
 The `sackd` and `slurmd` interfaces in `slurmctld` have been updated to support multiple controller hostnames and their main charm code now constructs a comma-separated list of hostnames with port ":6817" appended. Updates to controller data for these charms are guarded with `if not self._charm.all_units_observed():` checks to prevent partial updates.
 
@@ -113,7 +115,7 @@ New `if not self.framework.model.unit.is_leader():` guards have been placed arou
 
 The `if not self._charm.slurm_installed:` guards in these interfaces have been removed as keys are now generated in the `Start` hook rather than `Install`. The guards have been replaced with checks for the existence of `auth_key` and `jwt_rsa`.
 
-## Failover tests
+### Failover tests
 
 To be confident the implemented approach for HA is suitable, a [Jubilant](https://github.com/canonical/jubilant) test suite has been written to exercise a cluster in its ability to handle scaling and availability events. This suite adds to the existing Slurm charm integration tests and, given it increases test time by 30-60 minutes on moderately powered desktop,  has been gated by flag: `--run-high-availability`.
 
@@ -140,13 +142,13 @@ The following scenarios are tested sequentially. The cluster state resulting fro
 9. Removing the leader slurmctld unit.
 10. Scaling up slurmctld and sackd simultaneously
 
-## Alternative approaches considered
+### Alternative approaches considered
 
 Before implementing the above, other options for the StateSaveLocation and Slurm configuration data were explored but found to be lacking in comparison. Details are provided below, including information on proofs of concepts developed to prototype HA candidates.
 
-### Considered sharing of StateSaveLocation data
+#### Considered sharing of StateSaveLocation data
 
-#### Juju shared storage
+##### Juju shared storage
 
 Juju manages the storage for the `slurmctld` application. All units share the same storage.
 
@@ -166,7 +168,7 @@ Juju manages the storage for the `slurmctld` application. All units share the sa
     
 * Performance implications unclear until supported by Juju.
 
-#### Primary instance NFS export
+##### Primary instance NFS export
 
 The StateSaveLocation data is stored on the primary instance local storage and exported to all others via NFS.
 
@@ -180,7 +182,7 @@ The StateSaveLocation data is stored on the primary instance local storage and e
 
 * Provides only minimal additional availability. Would provide resilience against `slurmctld` service failures but not against node failures; backup instances would be unable to take over if the primary instance lost network connectivity. For example, from a software crash in the network stack, a failed network adapter in the underlying host, and so on.
 
-#### Cloud native shared storage
+##### Cloud native shared storage
 
 *For an example use case with Microsoft Azure shared disks, see https://learn.microsoft.com/en-us/azure/virtual-machines/disks-shared#persistent-reservation-flow*
 
@@ -194,7 +196,7 @@ Cloud-specific functionality such as [Azure shared disks](https://learn.microsof
 
 * Vendor lock-in. A solution for one cloud will not be portable to another, losing the benefits of Juju and charms.
 
-#### DRBD replication
+##### DRBD replication
 
 *For an example of DRBD data replication, see https://linbit.com/blog/shared-nothing-high-availability/*
 
@@ -226,7 +228,7 @@ StateSaveLocation data is stored on a dedicated block device per `slurmctld` ins
       
 * Juju storage provision is currently [bugged for Microsoft Azure](https://github.com/juju/juju/issues/19423), the primary target for Charmed HPC, making it challenging to request a dedicated block device.
 
-#### Syncthing replication
+##### Syncthing replication
 
 StateSaveLocation data is stored in its default location on storage local to the primary `slurmctld` instance. [Syncthing](https://syncthing.net/) is used to monitor the primary directory for changes and replicate files to all backup instances in real time.
 
@@ -244,7 +246,7 @@ StateSaveLocation data is stored in its default location on storage local to the
     
 * Authentication of devices is performance via secret “device IDs”. Unclear how these could be managed within a charm.
 
-#### Rsync over SSH replication
+##### Rsync over SSH replication
 
 The [rsync](https://rsync.samba.org/) tool is used to synchronize SaveStateLocation data between primary and backups over SSH. Either all backups periodically run rsync to pull data from the primary via a cron job/systemd timer, or the primary pushes the data to all backups using rsync+inotify or [lrsync](https://github.com/clsync/lrsync) for live syncing.
 
@@ -265,7 +267,7 @@ The [rsync](https://rsync.samba.org/) tool is used to synchronize SaveStateLocat
 
 * Not an established setup for HA. Challenging to recover from undesirable states (split brain, partial copies of files, etc.).
 
-#### Rsync over NFS replication
+##### Rsync over NFS replication
 
 ![](static/rsync-over-nfs.png)
 
@@ -319,7 +321,7 @@ The “slurmctld\_failover” event on the new active instance/promoted backup:
 * Removes the NFS mount for the previous active from AutoFS.  
 * Writes a “failover” value into the unit databag to trigger a relation-changed event on all other units, resulting in all non-active instances mounting and rsync-ing against the new active.
 
-##### **Proof of concept \- lessons learned**
+###### **Proof of concept \- lessons learned**
 
 This approach proved too brittle to continue refining into production due to risks concerning the:
 
@@ -335,7 +337,7 @@ There also exists the possibility of backups syncing from the wrong host. This i
 
 **Complexity of tracking active/non-active status.** The charm code required significant extension to handle differing behavior for the active instance and all non-active instances. This was further complicated by the differing behavior necessary for leader and non-leader units, with consideration needed for situations such as a backup/non-active instance being the leader unit and the implications for charm actions, etc. This would be less of a concern with a shared file system, rather than a replication, approach.
 
-#### Csync2 Replication
+##### Csync2 Replication
 
 The [csync2 utility](https://github.com/LINBIT/csync2) is used to keep StateSaveLocation data in sync across all instances. This utility maintains an internal database of files on each host in a cluster and pushes changes whenever it is executed. File conflicts can be resolved automatically by configuring an auto-resolution policy, such as `younger`, where the most recently modified file wins the conflict.
 
@@ -376,7 +378,7 @@ As the `slurmctld` application is scaled, unit hostnames are added/removed from 
 
 As in the rsync proof of concept, a systemd timer is used to periodically run csync2 and synchronize files across all units.
 
-##### **Proof of concept \- lessons learned**
+###### **Proof of concept \- lessons learned**
 
 This approach also proved too brittle to develop further due to risks concerning the:
 
@@ -388,7 +390,7 @@ This could be mitigated by delaying the service start until StateSaveLocation da
 
 In essence, the issue with csync2 in this use case is it guarantees “eventual coherence” whereas the `slurmctld` service expects that its view of StateSaveLocation data is always coherent across instances.
 
-#### MicroCeph replication
+##### MicroCeph replication
 
 [MicroCeph](https://canonical-microceph.readthedocs-hosted.com/en/latest/) is used by the `slurmctld` charm to set up a CephFS file system with units as members of the cluster. StateSaveLocation data is made available to all units via this shared file system.
 
@@ -473,11 +475,11 @@ sudo mount -t ceph :/ /mnt/mycephfs/ -o name=admin,fs=newFs
 
 These steps were adapted into a proof of concept implementation wherein the charm leader performs cluster bootstrapping, as above, and provides join keys to new units via the peer relation. The CephFS storage is mounted via AutoFS, as in the rsync proof of concept.
 
-##### **Proof of concept \- lessons learned**
+###### **Proof of concept \- lessons learned**
 
 This proof of concept was not pursued further due to the complexity of managing a clustered file system within the controller charm (we could not reasonably replicate the dedicated [MicroCeph charm](https://charmhub.io/microceph)) and the requirements around maintaining cluster quorum. It also locked the user to the Ceph file system.
 
-#### Gluster replication
+##### Gluster replication
 
 A Gluster [replicated volume](https://docs.gluster.org/en/main/Administrator-Guide/Setting-Up-Volumes/#creating-replicated-volumes) is used to create copies of StateSaveLocation data across all instances, with each instance contributing its own brick (export directory).
 
@@ -544,7 +546,7 @@ sudo mount -t glusterfs juju-d7b2ca-29:/myvol /mnt/glusterfs
 ls /mnt/glusterfs
 ```
 
-#### Modification of slurmctld code to use a database
+##### Modification of slurmctld code to use a database
 
 The `slurmctld` service source code is modified to store the StateSaveLocation data in a database rather than on the file system.
 
@@ -567,7 +569,7 @@ The `slurmctld` service source code is modified to store the StateSaveLocation d
 
 * Would require approval from SchedMD to be accepted into the Slurm codebase.
 
-#### Shared storage via filesystem-client (chosen approach)
+##### Shared storage via filesystem-client (chosen approach)
 
 ![](static/shared-storage.png)
 
@@ -591,7 +593,7 @@ A challenge with this approach is, given the shared storage is provided via subo
 
 The proof of concept for this approach was carried forward and became the final implementation.
 
-### Considered charm interface and logic changes
+#### Considered charm interface and logic changes
 
 The use of the peer relation to store configuration data, as in `slurmrestd`, was implemented and used in the proofs of concept for rsync, csync2, and MicroCeph, but was deprecated in favour of the shared file system due to challenges around:
 
@@ -603,7 +605,7 @@ The use of the peer relation to store configuration data, as in `slurmrestd`, wa
 
 Only the aspect of each unit writing its own hostname into its databag and some interface changes remain in the final implementation. Further details on this considered approach are given below.
 
-#### slurmctld
+##### slurmctld
 
 ![](static/databags.png)
 
@@ -611,7 +613,7 @@ Only the aspect of each unit writing its own hostname into its databag and some 
 
 As an initial change, the install hook is modified such that non-leader units are no longer immediately set to `BlockedStatus("slurmctld high-availability not supported")` on deploy.
 
-#### SlurmctldHost definition and ordering
+##### SlurmctldHost definition and ordering
 
 Assembly of the slurm.conf file is modified to allow for multiple [SlurmctldHost](https://slurm.schedmd.com/slurm.conf.html#OPT_SlurmctldHost) definitions. The order of these definitions determines HA failover order: “the first entry will run as the primary and all other entries as backups. If the first specified host fails, the daemon will execute on the second host. If both the first and second specified host fails, the daemon will execute on the third host”.
 
@@ -624,7 +626,7 @@ At each subsequent relation-joined hook, the charm leader retrieves the hostname
 
 During configuration, the charm leader assembles the `slurm.conf` file by querying the peer relation for the list of “controllers” and writes out `SlurmctldHost=<hostname>` entries in the order specified.
 
-#### Duplicating configuration data across peers
+##### Duplicating configuration data across peers
 
 All units in the application must have their own identical copies of Slurm configuration files: `slurm.conf, gres.conf,` and all others. The [“configless”](https://slurm.schedmd.com/configless_slurm.html) approach employed by `slurmd, sackd`, and other Slurm charms cannot be employed as `slurmctld` is the source of configuration data in this setup. Similarly, the cluster authentication key must be shared with all peers.
 
@@ -634,7 +636,7 @@ The `slurmctld` leader writes out configuration data to disk using methods: `_on
 
 On this push, a `relation-changed` event is triggered and non-leader instances retrieve configuration data and the cluster authentication key from the peer relation. The data is written to the appropriate paths on disk and relevant services are reloaded or restarted.
 
-#### Other charm relations
+##### Other charm relations
 
 The `slurmd` and `sackd` charms integrate with `slurmctld` and have been adjusted to handle multiple instances. The `config_server` attribute of the `slurmd` and `sackd` managers now takes a comma-separated list of `slurmctld` hostnames, rather than a single hostname.
 
@@ -642,18 +644,10 @@ The application relation data between `slurmctld` and `slurmd`/`sackd` has been 
 
 As the list of hostnames can now change dynamically (through `juju add-unit` and `juju remove-unit`), the `slurmctld` hostname(s) in the relation data must now be updated whenever a new `slurmctld` instance joins or leaves the relation. This is accomplished by defining a custom `SlurmctldAvailableEvent` event that is emitted following a `slurmctld` peer relation-joined event. The handler for this event then updates the `slurmd` and `sackd` relations with the latest list of controllers.
 
-# References
+## References
 
 The Slurm documentation on HA is available at:
 
 * [https://slurm.schedmd.com/quickstart\_admin.html\#HA](https://slurm.schedmd.com/quickstart_admin.html#HA)  
 * [https://slurm.schedmd.com/slurm.conf.html\#OPT\_SlurmctldHost](https://slurm.schedmd.com/slurm.conf.html#OPT_SlurmctldHost)  
 * [https://slurm.schedmd.com/quickstart\_admin.html\#Config](https://slurm.schedmd.com/quickstart_admin.html#Config)
-
-# Spec History and Changelog
-
-| Date       | Status    | Author(s)                                                        | Comment                                                |
-|:---------- |:--------- |:---------------------------------------------------------------- |:------------------------------------------------------ |
-| 2025-04-01 | Braindump | [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) | Initial braindump                                      |
-| 2025-04-30 | Braindump | [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) | Updates to potential approaches                        |
-| 2025-06-25 | Drafting  | [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) | Revised all sections in preparation for public release |
