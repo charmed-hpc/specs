@@ -1,21 +1,17 @@
-| Index          | HPC049                                                           |                   |             |
-|:---------------|:-----------------------------------------------------------------|:------------------|:------------|
-| Title          | Replace `node-configured` action                                 |                   |             |
-| **Type**       | **Author(s)**                                                    | **Status** 		| **Created** |
-| Implementation | [Jason Nucciarone](mailto:jason.nucciarone@canonical.com)        | Pending Review    | 2025-10-30  |
-|                | **Reviewer(s)**                                                  | **Status**        | **Date**    |
-|                | [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) | Accepted          | 2025-11-04  |
-|                | [Julián Espina Del Ángel](mailto:julian.espina@canonical.com)    | Accepted          | 2025-11-04  |
-|                | [James Beedy](mailto:james@vantagecompute.ai)                    | Accepted          | 2025-12-11  |
-|                | [Ashley Cliff](mailto:ashley.cliff@canonical.com)                | Accepted			| 2025-12-12  |
+---
+index: UHPC004
+title: Replace `node-configured` action
+---
 
-# Abstract
+# Replace `node-configured` action
+
+## Abstract
 
 This specification proposes replacing the existing `node-configured` action
 on the slurmd charm with a better, more scalable action that provides
 the same level of control to Charmed HPC's existing set of users.
 
-# Rationale
+## Rationale
 
 The slurmd charm currently has an action named `node-configured`. The
 action is used to move deployed compute nodes from their initial "down"
@@ -51,7 +47,7 @@ units have been deployed.
 
 However, there are several issues with the `node-configured` action.
 
-### **Scalability**
+#### **Scalability**
 
 The `node-configured` action does not scale in large cluster
 environments because Juju does not support application-level actions.
@@ -67,7 +63,7 @@ Both approaches severely impact the operator experience as they require
 operators to sink time into developing custom solutions ad-hoc to handle
 something Charmed HPC should automatically handle by default.
 
-### **State inconsistencies**
+#### **State inconsistencies**
 
 The Slurm charms have several conflicting actions for managing the state
 of compute nodes. For example, the slurmctld charm has a `resume` action
@@ -87,19 +83,19 @@ Provided these issues above, it is clear that the `node-configured`
 action must be removed from the slurmd charm and replaced with a better
 implementation.
 
-# Specification
+## Specification
 
 The sections below propose new actions and configuration options that
 will replace the `node-configured` action, and elaborate on how the new
 actions will address the current issues caused by the Slurm charms.
 
-## Assumptions
+### Assumptions
 
 The proposed implementations below assume that Charmed Slurm uses the
 unit name of a deployed slurmd charm rather than the machine hostname as
 the enlisted node name in Slurm.
 
-## Proposed actions
+### Proposed actions
 
 The actions proposed below will replace the "statefulness" feature of
 `node-configured`. These actions provide the level of control necessary
@@ -129,13 +125,13 @@ application as the slurmctld application leader may failover to a
 secondary controller. Operations may need to be performed on compute
 nodes while the primary controller is recovered.
 
-#### Persisting compute node state across slurmd service restarts
+##### Persisting compute node state across slurmd service restarts
 
 No additional mechanisms are required to persist compute nodes' states
 between slurmd service restarts. Slurm will remember the current state
 of a restarted node in Slurm's configured `StateSaveLocation`.
 
-#### Persisting compute node state across machine restarts
+##### Persisting compute node state across machine restarts
 
 Compute nodes that are rebooted using the `juju-reboot` command or 
 with another cloud-provided mechanism will automatically be
@@ -172,7 +168,7 @@ they applied using the `set-node-state` action unless they updated the
 proposed `default_node_state` and `default_node_reason` configurations to reflect
 that state and reason.
 
-## Proposed configuration options
+### Proposed configuration options
 
 The configuration options proposed below will modify the default
 behavior of the slurmd charm, where a new compute node is enlisted into
@@ -243,9 +239,7 @@ option after the initial cluster deployment:
 juju config slurmd default_node_reason="Machine rebooted"
 ```
 
-# Further Information
-
-## Relevant links
+## Further Information
 
 1. [Original Ubuntu HPC community discussion on GitHub Discussions](https://github.com/orgs/charmed-hpc/discussions/16)
 2. [`StateSaveLocation` documentation](https://slurm.schedmd.com/slurm.conf.html#OPT_StateSaveLocation)
@@ -256,13 +250,3 @@ juju config slurmd default_node_reason="Machine rebooted"
 7. [`Reason` documentation](https://slurm.schedmd.com/slurm.conf.html#OPT_Reason)
 8. [“fail” documentation](https://slurm.schedmd.com/slurm.conf.html#OPT_FAIL)
 9. “[failing” documentation](https://slurm.schedmd.com/slurm.conf.html#OPT_FAILING)
-
-# Spec History and Changelog
-
-| Author(s)                                                 | Status         | Date       | Comment                                                                                                                                                            |
-|:----------------------------------------------------------|:---------------|:-----------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Drafting       | 2025-10-30 | Start initial draft.                                                                                                                                               |
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Pending Review | 2025-11-04 | Submitted for initial review to [Dominic Sloan-Murphy](mailto:dominic.sloanmurphy@canonical.com) and [Julián Espina Del Ángel](mailto:julian.espina@canonical.com) |
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Pending Review | 2025-11-04 | Remove proposed `mark-\*` actions, rename `set-state` to `set-node-state`                                                                                          |
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Accepted       | 2025-12-12 | Specification accepted                                                                                                                                             |
-| [Jason Nucciarone](mailto:jason.nucciarone@canonical.com) | Updated        | 2025-12-17 | Rename proposed configurations options to `default_node_state` and `default_node_reason`                                                                           |
