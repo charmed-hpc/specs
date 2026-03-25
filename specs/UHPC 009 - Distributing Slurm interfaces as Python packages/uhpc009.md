@@ -164,7 +164,7 @@ jobs:
 ```
 
 The workflow is triggered on every push to `main` that touches any `pyproject.toml`
-file under `pkgs/`. The `get-packages` job compares the `version` field in each
+file under `pkg/`. The `get-packages` job compares the `version` field in each
 changed `pyproject.toml` against its value in the previous commit; only packages
 whose version actually increased are forwarded to the `publish` job. Each qualifying
 package is built with `uv build` and then uploaded to PyPI using
