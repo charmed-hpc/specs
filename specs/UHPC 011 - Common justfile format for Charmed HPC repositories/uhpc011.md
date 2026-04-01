@@ -73,13 +73,9 @@ clean:
 [group("lint")]
 check:
 
-# Run unit tests for specified artifacts, or all artifacts if none specified
+# Run specified target test suites, or all test suites if none specified
 [group("test")]
-unit *args:
-
-# Run integration tests for specified artifacts, or all artifacts if none specified
-[group("test")]
-integration *args:
+test *targets:
 ```
 
 ### Recommended recipes
@@ -100,6 +96,20 @@ lint:
 [group("lint")]
 typecheck:
 
+# Run all test suites
+# Implementation expected to be composed of optional/recommended recipes: unit, integration, and
+# other test types.
+[group("test")]
+test-all:
+
+# Run unit tests for specified artifacts, or all artifacts if none specified
+[group("test")]
+unit *args:
+
+# Run integration tests for specified artifacts, or all artifacts if none specified
+[group("test")]
+integration *args:
+
 # Build specified artifacts, or all artifacts if none specified
 [group("build")]
 build *args:
@@ -115,6 +125,44 @@ env:
 # Upgrade uv.lock with the latest dependencies
 [group("uv")]
 upgrade:
+```
+
+### Suggested implementation of `test` recipe
+
+Given the relative complexity of the required `test` recipe, a suggested implementation is provided
+here. However, this is not enforced and the recipe can be implemented as desired so long as the
+specified semantics are followed.
+
+Note, this implementation requires an environment where `bash` is available.
+
+```
+test *targets:
+    #!/usr/bin/env bash
+    if [ "{{targets}}" = "" ]; then
+        just test-all
+        exit 0
+    fi
+
+    for target in {{targets}}; do
+        if just --show $target > /dev/null 2>&1; then
+            echo "Running $target tests..."
+            just $target
+        else
+            echo "$target tests not found, skipping."
+            exit 1
+        fi
+    done
+
+test-all: unit functional integration
+
+unit:
+  @echo "Running unit tests"
+
+functional:
+  @echo "Running functional tests"
+
+integration:
+  @echo "Running integration tests"
 ```
 
 ### Example justfile - slurm-charms repository
@@ -157,6 +205,29 @@ clean:
 # Apply static checks
 [group("lint")]
 check: fmt lint typecheck
+
+# Run tests for specified targets, or all tests if none specified
+[group("test")]
+test *targets:
+    #!/usr/bin/env bash
+    if [ "{{targets}}" = "" ]; then
+        just test-all
+        exit 0
+    fi
+
+    for target in {{targets}}; do
+        if just --show $target > /dev/null 2>&1; then
+            echo "Running $target tests..."
+            just $target
+        else
+            echo "$target tests not found, skipping."
+            exit 1
+        fi
+    done
+
+# Run all test suites
+[group("test")]
+test-all: unit integration
 
 # Run unit tests
 [group("test")]
@@ -251,10 +322,28 @@ clean:
 [group("lint")]
 check: fmt validate
 
-# Run unit tests
+# Run tests for specified targets, or all tests if none specified
 [group("test")]
-unit *args:
-    @echo "No unit tests implemented"
+test *targets:
+    #!/usr/bin/env bash
+    if [ "{{targets}}" = "" ]; then
+        just test-all
+        exit 0
+    fi
+
+    for target in {{targets}}; do
+        if just --show $target > /dev/null 2>&1; then
+            echo "Running $target tests..."
+            just $target
+        else
+            echo "$target tests not found, skipping."
+            exit 1
+        fi
+    done
+
+# Run all test suites
+[group("test")]
+test-all: integration
 
 # Run integration tests
 [group("test")]
