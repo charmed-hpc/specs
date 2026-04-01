@@ -46,7 +46,7 @@ Observer classes will be one-to-one; one observer will observe one domain.
 A domain is something in a charm that emits events that can be observed. 
 Examples of domains include integrations or a particular subset of actions. An observer 
 named `SlurmctldObserver` would observe events related to the `slurmctld` integration. 
-The `slurmctld` integration would is the domain in this example. Observers for actions
+The `slurmctld` integration is the domain in this example. Observers for actions
 can observe logical groups of actions such as key rotation or compute node management,
 however, these observers will have a more flexible scope compared to integration observers
 that will be decided by maintainers during implementation.
@@ -90,7 +90,8 @@ charm are modified.
 
 ### Defining observers
 
-An observer will accept only one argument; the charm object that it is observing: 
+Observer classes must inherit from `ops.Object` and its `__init__` constructor must accept only 
+one argument; the charm object that it is observing: 
 
 ```python
 # In observer/sackd.py
@@ -185,13 +186,16 @@ compliant with this specification.
 
 ### Organizing observers
 
-Observers will be placed under the `src/observers/` directory in a charm repository. For example,
-the `slurmctld` charm's integration observers will be organized as follows:
+Observer modules will be organized by the domain that they are observing. Integration event 
+observers will be placed under `src/integrations`, action observers will be placed under 
+`src/actions`, and operational event observers will be placed under `src/operations`.
+
+Observe modules will be one-to-one; one observer module will contain only one observer.
+For example, the `slurmctld` charm's integration observers will be organized as follows:
 
 ```shell
-observers/
+src/integrations/
 ├── __init__.py
-├── ha.py
 ├── sackd.py
 ├── slurmdbd.py
 ├── slurmd.py
@@ -199,15 +203,30 @@ observers/
 └── slurmrestd.py
 ```
 
+The `slurmctld` charm's operational observers will be organized in similar manner as above:
+
+```shell
+src/operations/
+├── __init__.py
+└── ha.py
+```
+
 The observer classes will be exposed using `__all__` in the *\_\_init\_\_.py* files:
 
 ```python
-# In __init__.py
+# In src/integrations/__init__.py
 
 __all__ = [
    "SackdObserver",
    "SlurmdObserver",
    "SlurmdbdObserver",
+   ...
+]
+
+# In src/operations/__init__.py
+
+__all__ = [
+   "HighAvailabilityObserver",
    ...
 ]
 ```
@@ -217,7 +236,8 @@ This way the observer classes can be unified under one import statement in the _
 ```python
 # In charm.py
 
-from observers import ...
+from integrations import ...
+from operations import ...
 ```
 
 #### Evaluated alternatives
