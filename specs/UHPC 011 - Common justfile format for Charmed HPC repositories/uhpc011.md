@@ -104,10 +104,6 @@ typecheck:
 [group("build")]
 build *args:
 
-# Publish specified artifacts, or all artifacts if none specified
-[group("release")]
-publish *args:
-
 # Regenerate uv.lock
 [group("uv")]
 lock:
