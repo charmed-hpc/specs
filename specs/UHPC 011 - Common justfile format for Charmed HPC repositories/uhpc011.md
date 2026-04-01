@@ -293,6 +293,13 @@ help:
     @just --list --unsorted
 ```
 
+## Evaluated alternatives
+
+For the required `setup` recipe, `init` and `env` were considered as alternative names because of
+their existing usage in current `justfiles`, but `setup` was chosen instead because the terms `env`
+and `init` are tightly integrated with `uv` and `terraform` toolchains, respectively, whereas
+`setup` is a more toolchain-agnostic recipe name.
+
 ## Further work
 
 To be determined:
