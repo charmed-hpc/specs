@@ -34,7 +34,7 @@ permitted.
 
 The single common prerequisite that must be installed on the host before a Charmed HPC `justfile`
 can be used is `just` itself. The installation method is not prescribed. It is expected the typical
-methods will be through the distribution package manager, through the Snap store, or through an
+methods will be through the distribution package manager, through the Snap Store, or through an
 external GitHub action within a workflow.
 
 Repositories may delegate to tooling, such as `repository.py`, [`uv`](https://github.com/astral-sh/uv)
