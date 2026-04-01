@@ -27,7 +27,7 @@ A common `justfile` format is proposed here to address these issues.
 
 ## Specification
 
-Every Charmed HPC `justfile` must run with `just` version 1.46.0. Use of unstable features is
+Every Charmed HPC `justfile` must run with `just` version 1.48.1. Use of unstable features is
 permitted.
 
 ### Prerequisites
