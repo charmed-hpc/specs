@@ -30,6 +30,9 @@ A common `justfile` format is proposed here to address these issues.
 Every Charmed HPC `justfile` must run with `just` version 1.48.1. Use of unstable features is
 permitted.
 
+Use of [groups](https://just.systems/man/en/groups.html) is prohibited. All recipes must be
+ungrouped.
+
 ### Prerequisites
 
 The single common prerequisite that must be installed on the host before a Charmed HPC `justfile`
@@ -61,69 +64,55 @@ default:
 help:
 
 # Prepare the local environment
-[group("dev")]
 setup:
 
 # Clean project directory
-[group("dev")]
 clean:
 
 # Apply static checks
 # Implementation expected to be composed of optional/recommended recipes: fmt, lint, and typecheck.
-[group("lint")]
 check:
 
 # Run specified target test suites, or all test suites if none specified
-[group("test")]
 test *targets:
 ```
 
 ### Recommended recipes
 
 Repositories may implement the following recipes as required. If implemented, they must use the
-recipe names and groups given below:
+recipe names given below:
 
 ```
 # Apply formatting standards
-[group("lint")]
 fmt:
 
 # Check against style standards
-[group("lint")]
 lint:
 
 # Perform type checking
-[group("lint")]
 typecheck:
 
 # Run all test suites
 # Implementation expected to be composed of optional/recommended recipes: unit, integration, and
 # other test types.
-[group("test")]
 test-all:
 
 # Run unit tests for specified artifacts, or all artifacts if none specified
-[group("test")]
 unit *args:
 
 # Run integration tests for specified artifacts, or all artifacts if none specified
-[group("test")]
 integration *args:
 
 # Build specified artifacts, or all artifacts if none specified
-[group("build")]
 build *args:
 
 # Regenerate uv.lock
-[group("uv")]
 lock:
 
-# Create a development environment
-[group("uv")]
+# Create a uv development environment
 env:
 
 # Upgrade uv.lock with the latest dependencies
-[group("uv")]
 upgrade:
 ```
 
@@ -194,20 +183,16 @@ default:
     @just help
 
 # Prepare the local environment
-[group("dev")]
 setup: env
 
 # Clean project directory
-[group("dev")]
 clean:
     {{uv_run}} repository.py clean
 
 # Apply static checks
-[group("lint")]
 check: fmt lint typecheck
 
 # Run tests for specified targets, or all tests if none specified
-[group("test")]
 test *targets:
     #!/usr/bin/env bash
     if [ "{{targets}}" = "" ]; then
@@ -226,46 +211,37 @@ test *targets:
     done
 
 # Run all test suites
-[group("test")]
 test-all: unit integration
 
 # Run unit tests
-[group("test")]
 unit *args: lock
     {{uv_run}} repository.py unit {{args}}
 
 # Run integration tests
-[group("test")]
 integration *args: lock
     {{uv_run}} repository.py integration {{args}}
 
 # Regenerate uv.lock
-[group("uv")]
 lock:
     uv lock
 
-# Create a development environment
-[group("uv")]
+# Create a uv development environment
 env: lock
     uv sync --extra dev
 
 # Upgrade uv.lock with the latest dependencies
-[group("uv")]
 upgrade:
     uv lock --upgrade
 
 # Apply formatting standards
-[group("lint")]
 fmt: lock
     {{uv_run}} repository.py fmt
 
 # Check files against style standards
-[group("lint")]
 lint: lock
     {{uv_run}} repository.py lint
 
 # Perform type checking
-[group("lint")]
 typecheck:
     {{uv_run}} repository.py typecheck
 
@@ -308,22 +284,18 @@ default:
     @just help
 
 # Prepare the local environment
-[group("dev")]
 setup: init
 
 # Clean project directory
-[group("dev")]
 clean:
     find . -name .terraform -type d | xargs rm -rf
     find . -name .terraform.lock.hcl -type f | xargs rm -rf
     find . -name "terraform.tfstate*" -type f | xargs rm -rf
 
 # Apply static checks
-[group("lint")]
 check: fmt validate
 
 # Run tests for specified targets, or all tests if none specified
-[group("test")]
 test *targets:
     #!/usr/bin/env bash
     if [ "{{targets}}" = "" ]; then
@@ -342,22 +314,18 @@ test *targets:
     done
 
 # Run all test suites
-[group("test")]
 test-all: integration
 
 # Run integration tests
-[group("test")]
 integration *args:
     tofu apply -auto-approve
 
 # Apply formatting standards to project
-[group("lint")]
 fmt:
     just --fmt --unstable
     tofu fmt -recursive
 
 # Initialize Terraform modules
-[group("terraform")]
 init *modules:
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -367,7 +335,6 @@ init *modules:
     done
 
 # Validate Terraform modules
-[group("terraform")]
 validate *modules: (init modules)
     #!/usr/bin/env bash
     set -euxo pipefail
