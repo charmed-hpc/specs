@@ -7,7 +7,7 @@ title: Release policy for Charmed Slurm
 
 ## Abstract
 
-This spec details the release policy Charmed Slurm.
+This spec details the release policy for Charmed Slurm.
 
 ## Rationale
 
@@ -94,6 +94,123 @@ Warnings/limitations that will be included in the published documentation alongs
 * Due to potential breaking changes between major Slurm releases, Charmed Slurm cannot guarantee backwards compatibility with previous major Charmed Slurm versions
   * If a user requirement necessitates versions that are not from corresponding releases, they should open an issue on Github
 (or Support Discussion) and contact the team
+
+#### Release Notes Template
+
+````markdown
+---
+myst:
+  html_meta:
+    description: Release notes for Charmed Slurm X.Y, including highlights about new features, bug fixes, and other updates.
+---
+
+(ref-release-notes-charmed-slurm-X.Y)=
+# Charmed Slurm X.Y release notes
+
+% NOTE: This is a template for Charmed Slurm release notes. To use it, find
+% and replace `X.Y` with the Charmed Slurm release version (e.g. 25.11), and
+% `X.Y-Z` with the full version including the minor/patch number (e.g. 25.11-0).
+% Follow any instructions in comments, then delete the comment. See the release
+% policy in uhpc-003.md for more details.
+
+% Remove the comment prefix (%) from the appropriate sentence below, and delete
+% the other.
+% Charmed Slurm X.Y receives bug and security fix support for 1 year, following the upstream Slurm support life-cycle.
+% Charmed Slurm X.Y is a minor release containing bug and security fixes only.
+
+```{admonition} Components
+:class: note
+Charmed Slurm X.Y-Z includes:
+- Slurm machine charms (see [charm revisions](#ref-release-notes-charmed-slurm-X.Y-revisions) below)
+- `slurm-wlm` Debian packages for Slurm X.Y
+```
+
+% Optionally add any other introductory notes here. Fill out the content of the
+% sections below, and delete any sections that are not relevant to this release.
+
+(ref-release-notes-charmed-slurm-X.Y-requirements)=
+## Requirements and compatibility
+
+% List the requirements and compatibility information for this release, e.g.
+% supported Ubuntu bases, Juju versions, and any other dependencies.
+
+- Ubuntu base: <!-- e.g. Noble Numbat 24.04 LTS -->
+- Juju version: <!-- e.g. 3.6+ -->
+- Slurm version: X.Y
+
+```{important}
+Users are expected to use the Charmhub track that corresponds to their Slurm
+release. For example, Charmed Slurm version 25.11 should *only* be used with
+the 25.11 release of Slurm.
+```
+
+(ref-release-notes-charmed-slurm-X.Y-highlights)=
+## What's new
+
+This section highlights new and improved features in this release.
+
+### Feature short description placeholder (replace this text)
+
+% Dedicate a separate ### section for each new and improved feature highlight
+% description.
+
+(ref-release-notes-charmed-slurm-X.Y-bugfixes)=
+## Bug fixes
+
+The following bug fixes are included in this release.
+
+% List of links to resolved bug fix issues from GitHub.
+
+(ref-release-notes-charmed-slurm-X.Y-incompatible)=
+## Backwards-incompatible changes
+
+% Due to potential breaking changes between major Slurm releases, Charmed Slurm
+% cannot guarantee backwards compatibility with previous major Charmed Slurm
+% versions. List any changes that are not backwards compatible below.
+
+### Incompatible change short description placeholder (replace this text)
+
+% Dedicate a separate ### section to describe each change that is not backwards
+% compatible.
+
+(ref-release-notes-charmed-slurm-X.Y-deprecated)=
+## Deprecated features
+
+% List any features that have been deprecated or removed in this release.
+
+### Deprecated feature short description placeholder (replace this text)
+
+% Dedicate a separate ### section to describe each deprecated feature.
+
+## Known issues
+
+% List any known issues with this release (i.e. minor bugs).
+
+(ref-release-notes-charmed-slurm-X.Y-revisions)=
+## Charm revisions
+
+Charm revisions for this release on the `X.Y/stable` channel:
+
+% Update the table below with the correct revision numbers for each charm.
+
+| Charm         | Revision |
+|---------------|----------|
+| `slurmctld`   |          |
+| `slurmd`      |          |
+| `slurmdbd`    |          |
+| `slurmrestd`  |          |
+
+(ref-release-notes-charmed-slurm-X.Y-channels)=
+## Release channels
+
+This release is available on Charmhub under the `X.Y` track:
+
+- **Stable:** `juju deploy <charm> --channel X.Y/stable`
+- **Candidate:** `juju deploy <charm> --channel X.Y/candidate`
+- **Edge:** `juju deploy <charm> --channel X.Y/edge`
+
+To upgrade an existing deployment, run `juju refresh` to pull the latest revision from the stable channel.
+````
 
 ### Examples
 
