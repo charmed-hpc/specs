@@ -24,7 +24,13 @@ Charmed HPC artifacts:
 <!-- Update this list as the Charmed HPC portfolio evolves -->
 
 - Charmed Slurm (see [UHPC 003](../UHPC%20003%20-%20Release%20policy%20and%20notes%20for%20Charmed%20Slurm/uhpc-003.md))
-- filesystem-charms
+- filesystem-charms:
+  - cephfs-server-proxy
+  - filesystem-client
+  - lustre-server-proxy
+  - nfs-server-proxy
+  - test-mount-client
+- lustre-server
 - sssd-operator
 
 ### Versioning scheme
@@ -49,41 +55,60 @@ Individual components within Charmed HPC (e.g. Charmed Slurm) may follow their o
 
 Since Charmed HPC is a set of charms rather than a single charm, release channels apply to each constituent charm individually.
 
-* Each track has a corresponding GitHub branch, e.g. "25.11"
-* Each track on Charmhub provides three channels:
+* Each track has a corresponding GitHub branch
+* Each track on Charmhub provides four channels:
    * Edge, the development channel
+   * Beta
    * Candidate, to test the new release before publishing
    * Stable
      * No breaking changes will be made to integrations, configuration options, or actions in a stable channel of a charm
 
 ### Release cycle and feature freezes
 
-At a predetermined time, a 'soft' freeze point will be established; by this time, the current edge channel of each artifact for the current pre-release track must be pushed to Candidate. Following this push, any updates would be solely to resolve issues/bugs/etc. with the Candidate, ending with the 'hard' freeze.
+A Charmed HPC release progresses through three phases between freezes:
 
-Given the variety of charms, the Candidate/Stable for a given charm may be the same as for the prior release.
+* **Soft freeze** — all new feature work stops. Each charm is published to its **Beta** channel, where beta-level testing is performed.
+* **Hard freeze** — each charm is promoted from Beta to **Candidate**, where candidate-level testing is performed.
+* **Release day** — all charms are promoted from Candidate to **Stable**.
+
+Given the variety of charms, the Candidate/Stable for a given charm may be the same as for the prior release. Freeze dates are set during cycle planning.
 
 ```mermaid
 %%{init: {'themeVariables': {'critBorderColor': '#ff0000', 'critBkgColor': '#ff0000'}}}%%
 gantt
-   title Charmed HPC Release X.0 steps
-   dateFormat YYYY-MM
-   todayMarker off
-   section Slurm
+  title Charmed HPC Release steps
+  dateFormat YYYY-MM
+  todayMarker off
+  section Slurm
         Slurm 26.05 released by SchedMD                         :milestone, a1, 2026-05, 0d
         Charmed Slurm 26.05 release                             :milestone, 2026-06, 0d
-   section Charmed HPC
+        Slurm 26.11 released by SchedMD                         :milestone, a2, 2026-11, 0d
+        Charmed Slurm 26.11 release                             :milestone, 2026-12, 0d
+  section Charmed HPC X dev
         filesystem-charms dev                                   :f1, 2026-05, until v1
-        filesystem-charms Candidate                             :milestone, after f1
+        filesystem-charms Stable X                              :milestone, 2026-10, 0d
         sssd-operator dev                                       :s1, 2026-03, 2026-06
-        sssd-operator Candidate                                 :milestone, s2, after s1, 0d
-        sssd-operator Stable                                    :milestone, 2026-07, 0d 
+        sssd-operator Stable X                                  :milestone, 2026-10, 0d
+  section X Freeze
         'Soft freeze'                                           :crit, milestone, v1, 2026-08, 0d
-        Feature polishing                                       :after v1, until v2
+        Beta                                                    :p1, after v1, until v2
         'Hard freeze'                                           :crit, milestone, v2, 2026-09, 0d
-        Release X.0                                             :milestone, 2026-10
-   section Ubuntu
-        Resolute Raccoon 26.04 LTS                              :2026-04, 2026-11
-        Noble Numbat 24.04 LTS                                  :2026-01, 2026-04
+        Candidate                                               :c1, after v2, until r1
+        Release X.0                                             :crit, milestone, r1, 2026-10, 0d
+  section Charmed HPC Y dev
+        filesystem-charms dev                                   :f2, 2026-11, until v3
+        filesystem-charms Stable Y                              :milestone, 2027-05, 0d
+        sssd-operator dev                                       :s3, 2026-10, 2027-01
+        sssd-operator Stable Y                                  :milestone, 2027-05, 0d
+  section Y Freeze
+        'Soft freeze'                                           :crit, milestone, v3, 2027-03, 0d
+        Beta                                                    :p2, after v3, until v4
+        'Hard freeze'                                           :crit, milestone, v4, 2027-04, 0d
+        Candidate                                               :c2, after v4, until r2
+        Release Y.0                                             :crit, milestone, r2, 2027-05, 0d
+  section Ubuntu
+        Resolute Raccoon 26.04 LTS                              :2026-04, 2027-06
+        Noble Numbat 24.04 LTS                                  :2026-02, 2026-04
 ```
 
 
@@ -108,87 +133,7 @@ Warnings/limitations that will be included in the published documentation alongs
 
 #### Release Notes Template
 
-````
-# Charmed HPC <major release>.<patch version #> Release Notes
-
-Release date: YYYY-MM-DD
-
-## Summary
-
-Brief overview of this release, including the primary focus (e.g., new Ubuntu base, 
-new artifact versions, bug fixes, security updates).
-
-## Artifacts in this release
-
-| Artifact | Track | Revision | Notes |
-|----------|-------|----------|-------|
-| Charmed Slurm | <track> | <revision> | See [Charmed Slurm release notes] |
-| filesystem-charms | <track> | <revision> | |
-| sssd-operator | <track> | <revision> | |
-
-## Underlying dependencies
-
-| Dependency | Version | Notes |
-|------------|---------|-------|
-| charmed-hpc-libs | <version> | |
-
-## What's new
-
-### New features
-
-- Feature description and the artifact(s) it affects.
-
-### Improvements
-
-- Improvement description.
-
-## Requirements and compatibility
-
-### Supported Ubuntu bases
-
-- Ubuntu <version> LTS (Noble Numbat / etc.)
-
-### Juju version
-
-- Minimum Juju version: <version>
-
-## Backwards incompatible changes
-
-- Change description and required user action, if any.
-
-## Deprecated features
-
-- Feature or option that is deprecated, with recommended alternative.
-
-## Known issues
-
-- Issue description and any available workaround.
-
-## Upgrade notes
-
-### Upgrading from <previous major release>.x
-
-Instructions or considerations for upgrading from the previous major release.
-
-### Refreshing charms
-
-```bash
-juju refresh <charm-name> --channel <track>/stable
-```
-
-## Support lifecycle
-
-| Release | Release date | End of support |
-|---------|--------------|----------------|
-| <major release>.0 | YYYY-MM-DD | YYYY-MM-DD |
-
-Bug and security fix support is provided for [TBD] months after release.
-
-## References
-
-- [Charmed HPC release policy](link to this spec)
-- [Charmed Slurm release notes](link)
-````
+See the [Release Notes Template](release-notes-template.md) for the template used when drafting a new release's notes.
 
 ## Release notes sections
 
