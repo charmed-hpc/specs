@@ -82,15 +82,28 @@ Since Charmed HPC is a set of charms rather than a single charm, release channel
 
 ### Release cycle and feature freezes
 
-A Charmed HPC release progresses through three phases between freezes:
+Two distinct concepts drive the release cycle: the **risk status** a charm can be published at, and the **freeze points** in time that gate promotion between them.
 
-* **Soft freeze** — all new feature work stops. Each charm is published to its **Beta** channel, where candidadate-level testing is performed.
-* **Hard freeze** — each charm is promoted from Beta to **Candidate**, where stable-level testing is performed.
-* **Release day** — all charms are promoted from Candidate to **Stable**.
+#### Risk status
+
+Edge, Beta, Candidate and Stable are *risk statuses*. A charm advances through these statuses in order, with each status gated by a progressively more thorough level of testing:
+
+* **Edge** — the development status. To reach this status, basic PR tests must pass (unit and basic integration).
+* **Beta** — to reach this status, Beta-level testing must pass: solution and security testing.
+* **Candidate** — to reach this status, Candidate-level testing must pass: larger performance and scale testing, end-to-end testing, and performance and reliability testing.
+* **Stable** — to reach this status, Stable-level testing must pass: a dedicated time-block for full QA testing.
+
+#### Freeze points
+
+Freeze points are the dates that gate promotion between risk statuses. At each freeze point, a charm is promoted to the next risk status only once that status's testing is complete:
+
+* **Soft freeze** — all new feature work for the release stops. Once Beta-level testing is complete, each charm is promoted from Edge to **Beta**.
+* **Hard freeze** — once Candidate-level testing is complete, each charm is promoted from Beta to **Candidate**.
+* **Release day** — once Stable-level testing (full QA) is complete, all charms are promoted from Candidate to **Stable**.
 
 Given the variety of charms, the Candidate/Stable for a given charm may be the same as for the prior release. Freeze dates are set during cycle planning.
 
-> **[DECISION NEEDED]** Define the gating criteria for channel promotions (e.g., required test suites, manual QA sign-off, automated gates). Who sets freeze dates and how far in advance are they announced?
+> **[DECISION NEEDED]** Who sets freeze dates and how far in advance are they announced?
 
 ```mermaid
 %%{init: {'themeVariables': {'critBorderColor': '#ff0000', 'critBkgColor': '#ff0000'}}}%%
@@ -104,32 +117,22 @@ gantt
         Slurm 26.11 released by SchedMD                         :milestone, a2, 2026-11, 0d
         Charmed Slurm 26.11 release                             :milestone, 2026-12, 0d
   section Charmed HPC X dev
-        filesystem-charms dev                                   :f1, 2026-05, until v1
-        filesystem-charms Stable X                              :milestone, 2026-10, 0d
-        sssd-operator dev                                       :s1, 2026-03, 2026-06
-        sssd-operator Stable X                                  :milestone, 2026-10, 0d
-  section X Freeze
-        'Soft freeze'                                           :crit, milestone, v1, 2026-08, 0d
-        Beta                                                    :p1, after v1, until v2
-        'Hard freeze'                                           :crit, milestone, v2, 2026-09, 0d
-        Candidate                                               :c1, after v2, until r1
-        Release X.0                                             :crit, milestone, r1, 2026-10, 0d
+        Main dev work/Beta-level testing                        :f1, 2026-04, 2026-08
+        Soft freeze/Beta                                        :crit, milestone, v1, 2026-08, 0d
+        Candidate-level testing                                 :f2, 2026-08, 2026-09
+        Hard freeze/Candidate                                   :crit, milestone, v2, 2026-09, 0d
+        Stable-level testing                                    :f3, 2026-09, 2026-10
+        Release day X.0/Stable                                  :crit, milestone, r1, 2026-10, 0d
   section Charmed HPC Y dev
-        filesystem-charms dev                                   :f2, 2026-11, until v3
-        filesystem-charms Stable Y                              :milestone, 2027-05, 0d
-        sssd-operator dev                                       :s3, 2026-10, 2027-01
-        sssd-operator Stable Y                                  :milestone, 2027-05, 0d
-  section Y Freeze
-        'Soft freeze'                                           :crit, milestone, v3, 2027-03, 0d
-        Beta                                                    :p2, after v3, until v4
-        'Hard freeze'                                           :crit, milestone, v4, 2027-04, 0d
-        Candidate                                               :c2, after v4, until r2
-        Release Y.0                                             :crit, milestone, r2, 2027-05, 0d
+        Main dev work/Beta-level testing                        :f4, 2026-10, 2027-03
+        Soft freeze/Beta                                        :crit, milestone, v3, 2027-03, 0d
+        Candidate-level testing                                 :f5, 2027-03, 2027-04
+        Hard freeze/Candidate                                   :crit, milestone, v4, 2027-04, 0d
+        Stable-level testing                                    :f6, 2027-04, 2027-05
+        Release day Y.0/Stable                                  :crit, milestone, r2, 2027-05, 0d
   section Ubuntu
         Resolute Raccoon 26.04 LTS                              :2026-04, 2027-06
-        Noble Numbat 24.04 LTS                                  :2026-02, 2026-04
 ```
-
 
 
 
