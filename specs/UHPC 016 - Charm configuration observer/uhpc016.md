@@ -17,11 +17,10 @@ defined in specification UHPC010.
 
 ## Rationale
 
-A recent release of the `ops` library introduced the `load_config` method on
-the `CharmBase` class. This `load_config` method provides a richer way to load 
-charm application configuration data into a structured Python object such as
-a native Python dataclass or a data model constructed using the `pydantic` 
-validation library. 
+`ops` 2.23.0 introduced the `load_config` method on the `CharmBase` class. 
+This `load_config` method provides a richer way to load charm application 
+configuration data into a structured Python object such as a native Python 
+dataclass or a data model constructed using the `pydantic` validation library. 
 
 A benefit of using the `load_config` method instead of the `CharmBase` object's
 `config` property is that `pydantic` data models can be used to provide richer
