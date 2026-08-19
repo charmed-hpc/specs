@@ -1,5 +1,5 @@
 ---
-index: UHPC015
+index: UHPC016
 title: Charm configuration observer
 ---
 
