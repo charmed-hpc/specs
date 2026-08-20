@@ -54,7 +54,7 @@ must still be present.
 
 Recipes:
 
-```
+```just
 # Performed if no recipes are specified. Must have this implementation
 [private]
 default:
@@ -82,7 +82,7 @@ test *targets:
 Repositories may implement the following recipes as required. If implemented, they must use the
 recipe names given below:
 
-```
+```just
 # Apply formatting standards
 fmt:
 
@@ -114,6 +114,9 @@ env:
 
 # Upgrade uv.lock with the latest dependencies
 upgrade:
+
+# Generate publishing and management token for Charmhub.
+generate-charmhub-token:
 ```
 
 ### Suggested implementation of `test` recipe
@@ -124,7 +127,7 @@ specified semantics are followed.
 
 Note, this implementation requires an environment where `bash` is available.
 
-```
+```just
 test *targets:
     #!/usr/bin/env bash
     if [ "{{targets}}" = "" ]; then
@@ -156,7 +159,7 @@ integration:
 
 ### Example justfile - slurm-charms repository
 
-```
+```just
 # Copyright 2026 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -256,7 +259,7 @@ help:
 
 ### Example justfile - charmed-hpc-terraform repository
 
-```
+```just
 # Copyright 2026 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -343,6 +346,130 @@ validate *modules: (init modules)
         tofu -chdir=${module} fmt -check
         tofu -chdir=${module} validate
     done
+
+# Show available recipes
+help:
+    @just --list --unsorted
+```
+
+### Example justfile - sssd-operator repository
+
+```just
+#!/usr/bin/env just --justfile
+# Copyright 2023-2025 Canonical Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+uv := require("uv")
+
+project_dir := justfile_directory()
+src_dir := project_dir / "src"
+tests_dir := project_dir / "tests"
+
+export PY_COLORS := "1"
+export PYTHONBREAKPOINT := "ipdb.set_trace"
+export PYTHONPATH := project_dir + ":" + project_dir / "lib" + ":" + src_dir
+
+uv_run := "uv run --frozen --extra dev"
+
+[private]
+default:
+    @just help
+
+# Regenerate uv.lock
+lock:
+    uv lock
+
+# Create a development environment
+env: lock
+    uv sync --extra dev
+
+# Upgrade uv.lock with the latest dependencies
+upgrade:
+    uv lock --upgrade
+
+# Generate publishing and management token for Charmhub
+generate-charmhub-token:
+    charmcraft login \
+        --export=.charmhub.secret \
+        --permission=package-manage-metadata \
+        --permission=package-manage-releases \
+        --permission=package-manage-revisions \
+        --permission=package-view-metadata \
+        --permission=package-view-releases \
+        --permission=package-view-revisions \
+        --ttl=31536000  # 365 days
+
+# Apply coding style standards to code
+fmt: lock
+    {{uv_run}} ruff format {{src_dir}} {{tests_dir}}
+    {{uv_run}} ruff check --fix {{src_dir}} {{tests_dir}}
+
+# Check code against coding style standards
+lint: lock
+    {{uv_run}} codespell {{project_dir}}
+    {{uv_run}} ruff check {{src_dir}} {{tests_dir}}
+
+# Run static type checker on code
+typecheck: lock
+    {{uv_run}} pyright
+
+test *targets:
+    #!/usr/bin/env bash
+    if [ "{{targets}}" = "" ]; then
+        just test-all
+        exit 0
+    fi
+
+    for target in {{targets}}; do
+        if just --show $target > /dev/null 2>&1; then
+            echo "Running $target tests..."
+            just $target
+        else
+            echo "$target tests not found, skipping."
+            exit 1
+        fi
+    done
+
+# Run unit tests
+unit *args: lock
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    {{uv_run}} coverage run \
+        --source={{src_dir}} \
+        -m pytest -v --tb native -s \
+        {{args}} {{tests_dir / "unit"}}
+    {{uv_run}} coverage report
+
+# Run integration tests
+integration *args: lock
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    charmcraft -v pack
+    mv sssd_*.charm sssd.charm
+    export LOCAL_SSSD={{project_dir / "sssd.charm"}}
+    {{uv_run}} pytest \
+        -v \
+        --tb native \
+        -s \
+        --log-cli-level=INFO \
+        {{args}} \
+        {{tests_dir / "integration"}}
+
+# Run all test suites
+test-all: unit integration
 
 # Show available recipes
 help:
