@@ -220,7 +220,6 @@ Requires everything in `candidate`, plus:
   (data + config preserved) *(target)*.
 - [MAN] Security sign-off (no unresolved critical/high; SECURITY.md contact current).
 - [MAN] Documentation published (not just drafted) and release notes finalized.
-- [MAN] Approval recorded by the charm maintainer **and** the designated release owner.
 - [MAN] Rollback plan documented (which revision to refresh back to, and how).
 
 ### A.5 Automation vs. manual sign-off
@@ -454,7 +453,34 @@ Requires solution `candidate`, plus:
   maintainer.
 - [MAN] Documented rollback plan for the whole solution.
 
-### B.4 Non-functional expectations (solution level)
+### B.4 Automation vs. manual sign-off (solution)
+
+Same posture as A.5: automate the deterministic cross-charm checks; reserve humans for
+soak, scale, and the final go/no-go. Rows here are the cross-charm gates only;
+single-charm gates are inherited per the weakest-link rule.
+
+| Gate class                                | edge | beta | candidate | stable |
+|-------------------------------------------|:----:|:----:|:---------:|:------:|
+| All required charms at target channel     | CI   | CI   | CI        | MAN    |
+| Full-stack deploy + relations settle      | CI   | CI   | CI        | CI     |
+| End-to-end job + shared services (FS/SSSD/SSH) | - | CI  | CI        | CI     |
+| Cross-charm HA (job survives failover)    | -    | CI   | CI        | CI     |
+| Functional / BDD journeys                 | -    | CI   | CI        | CI     |
+| Cross-charm upgrade / rollback            | -    | -    | CI        | CI     |
+| Interface-compatibility matrix            | -    | -    | CI        | CI     |
+| Integrated observability (COS)            | -    | -    | CI        | CI     |
+| External IdP (Authentik), if in scope     | -    | -    | CI        | CI     |
+| Scale / soak / performance                | -    | -    | CI+MAN    | MAN    |
+| Composed-set security                     | -    | CI   | CI+MAN    | CI+MAN |
+| Solution docs / release notes             | -    | MAN  | MAN       | MAN    |
+| Provenance / frozen version matrix        | -    | -    | -         | CI+MAN |
+| Final promotion approval                  | auto | MAN  | MAN       | MAN    |
+
+As in Part A, promotion to solution `beta` and above is a deliberate action by the
+solution/release owner, never an automatic side effect. `candidate` and `stable` also
+require the maintainers of every required component (see B.6).
+
+### B.5 Non-functional expectations (solution level)
 
 | Area          | Expectation (proposed default) |
 |---------------|--------------------------------|
@@ -465,18 +491,6 @@ Requires solution `candidate`, plus:
 | Observability | Metrics, alerts, dashboards, and logs verified through COS |
 | Security      | No unresolved critical/high across any constituent artifact or dependency |
 
-### B.5 Roles and sign-offs
-
-| Role                 | Responsibility |
-|----------------------|----------------|
-| Component maintainer | Confirms their charm meets the single-charm gates at the target channel |
-| Solution/release owner | Owns the version matrix, cross-charm gates, and the final go/no-go |
-| QA / validation      | Runs and signs off soak, scale, HA, and performance evidence |
-| Security             | Reviews CVE/dependency scans across the set |
-| Docs                 | Confirms solution docs and release notes are published for the release |
-
-`candidate` and `stable` promotions require the solution/release owner plus the
-maintainers of every required component.
 
 ## References
 
