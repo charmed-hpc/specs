@@ -78,15 +78,22 @@ is the standard "build once, promote the artifact" principle.
 
 #### A.2.2 Tracks
 
-A Charmhub **track** groups a compatible line of the charm. For Slurm charms, tracks
-follow the upstream Slurm major/minor line and the supported Ubuntu base, e.g. a
-`YY.MM` track (`track/25.11` in git) plus `latest` for the current development line.
+A Charmhub **track** groups a compatible line of the charm. For charms with an
+upstream project that follows its own major/minor versioning (such as the Slurm
+charms), tracks follow that upstream line, e.g. a `YY.MM` track (`track/25.11` in
+git) plus `latest` for the current development line. Not every charm has an
+upstream to track this way; for those, `latest` may be the only track, or tracks
+may instead mark some other compatibility boundary (for example, a supported
+Ubuntu base or a breaking change to a relation interface).
 
 Guidance:
 
-- **One track per supported Slurm major line** that receives independent promotion.
-- A track pins a single Ubuntu base (currently `ubuntu@26.04`, `amd64`). Adding a base
-  or architecture is a new platform matrix entry that must re-clear the gates below.
+- **One track per independently-promoted compatibility line** (e.g. per supported
+  Slurm major line, where applicable).
+- A single track/channel can support multiple Ubuntu bases and architectures at
+  once (per the `platforms` entries in `charmcraft.yaml`); the base/architecture is
+  not itself part of the track. Adding a new base or architecture is a new platform
+  matrix entry that must re-clear the gates below.
 - `latest` maps to the `main` git branch; `YY.MM` maps to `track/YY.MM`.
 
 #### A.2.3 Current repository reality (baseline)
@@ -100,7 +107,7 @@ not yet implement a gate, it is marked *(target)*. Today, `slurm-charms` CI:
 - Runs unit tests (`ops.testing`/Scenario) and `jubilant` integration tests, with the
   HA suite gated behind `--run-high-availability`.
 - Has **no BDD/Gherkin suite yet**; functional coverage is imperative jubilant tests.
-  BDD (`pytest-jubilant-bdd`) is introduced as a *target* gate at candidate and above.
+  BDD (`pytest-jubilant-bdd`) is introduced as a *target* gate at beta and above.
 
 ### A.3 Testing dimensions
 
@@ -129,7 +136,8 @@ Each dimension is a class of evidence that a promotion gate can require.
   to the candidate revision, and assert data/config preservation and healthy status.
   Rollback tests refresh back down and assert recovery.
 - **Non-functional tests** cover: horizontal/vertical scale, multi-hour soak, a
-  performance baseline, HA failover, and a security/CVE scan of the artifact and deps.
+  performance baseline, HA failover, and a security/CVE scan of the artifact and its
+  dependencies.
 
 ### A.4 Per-channel promotion gates
 
@@ -147,7 +155,7 @@ Trigger: merge to the tracked branch (`main` or `track/*`). Fully automated.
 - [CI] Charm packs successfully for every supported base (`just repo stage <charm>`
   + `charmcraft pack`).
 - [CI] Smoke integration: deploy + reach `active/idle` on at least one base
-  (`just integration` subset).
+  (a smoke subset of `just integration`, e.g. selected by a pytest marker).
 - [CI] Conventional-commit and `commitlint` checks pass.
 - [CI] Auto-published to `<track>/edge` (`canonical/charming-actions/upload-charm`).
 
@@ -161,19 +169,21 @@ Requires everything in `edge`, plus:
 - [CI] Every charm **action** is exercised by an integration or unit test.
 - [CI] Every `provides`/`requires` relation is exercised by an integration test
   (relation data flows and both sides settle).
-- [CI] **HA / resilience** suite passes: `just integration -- --run-high-availability`
-  (leader loss and `slurmctld` failover recover to healthy).
+- [CI] **HA / resilience (single-charm)** suite passes:
+  `just integration -- --run-high-availability` (leader loss and `slurmctld` failover
+  recover the charm to healthy on its own). Job survival across failover with the rest
+  of the stack live is a solution gate, see B.3.2.
+- [CI] **Automated security check (single-charm)**: CVE/dependency scan of the
+  artifact and its Python/OS dependencies with **no unresolved critical/high**
+  findings.
 - [CI] **Functional / BDD** acceptance scenarios pass *(target: `pytest-jubilant-bdd`
   Gherkin features covering the charm's primary user journeys)*.
-- [CI] Basic upgrade test passes: `juju refresh` from the current `beta` (or `edge`
-  N-1) revision to the candidate revision reaches healthy status *(target)*.
-- [CI/MAN] Coverage has not regressed versus the current `beta` revision.
-- [CI] **Automated security check**: CVE/dependency scan of the artifact and its
-  Python/OS dependencies with **no unresolved critical/high** findings.
+- [CI/MAN] Coverage has not regressed versus the current `beta` revision (or the
+  previous revision, if none is on `beta` yet).
 - [MAN] Draft documentation exists for any new config/action/relation (a paired PR in
   `charmed-hpc-docs`, per the contributing guide).
 - [CI] **Nightly run** passes, including the scheduled HA job *(no fixed bake time)*.
-- [MAN] No open **critical** or **high** severity bugs against the revision.
+- [MAN] No open **critical or high** severity bugs against the revision.
 
 #### A.4.3 Promote to `candidate`
 
@@ -187,9 +197,9 @@ Requires everything in `beta`, plus:
   - **rollback** candidate -> previous revision recovers cleanly.
 - [CI] Non-functional baseline captured *(target)*:
   - scale up **and** down of applicable applications (units and resources),
-  - soak >= **24h** (single charm) with no leaks/restarts/status flaps,
+  - soak >= **12h** (single charm) with no leaks/restarts/status flaps *(target, depends on Solutions QA)*,
   - performance baseline recorded (regression budget agreed by maintainers).
-- [MAN] Documentation complete: usage, configuration, actions, relations, limitations,
+- [MAN] Documentation drafted: usage, configuration, actions, relations, limitations,
   and any deviation from the non-charmed workload.
 - [MAN] Release notes / CHANGELOG entry drafted for the revision.
 - [MAN] Backwards-compatibility / interface-stability review: no breaking change to a
@@ -202,7 +212,7 @@ Intent: supported, documented, backwards-compatible general availability.
 
 Requires everything in `candidate`, plus:
 
-- [MAN] **Soak on `candidate`:** >= **14 days** with **zero regressions** and no new
+- [MAN] **Soak on `candidate`:** >= **7 days** with **zero regressions** and no new
   critical/high defects (proposed default).
 - [CI/MAN] Artifact is reproducible from a tagged, signed commit; the exact revision
   promoted is the one that soaked on `candidate`.
@@ -235,86 +245,6 @@ humans for judgement, soak, and scale.
 Promotion to `beta` and above should be a deliberate action (a maintainer running the
 promotion, or an approved workflow_dispatch), never an automatic side effect of a merge.
 
-### A.6 Release-hygiene gates (minimal)
-
-Beyond tests, each promotion at `candidate` and `stable` must confirm:
-
-1. **Documentation**: user-facing changes have a merged/queued `charmed-hpc-docs` PR,
-   or a justification for why none is needed (per the contributing guide).
-2. **Release notes / CHANGELOG**: a human-readable summary of what changed and any
-   operator-visible impact.
-3. **Security / dependencies**: CVE and dependency scan clean of critical/high;
-   `SECURITY.md` reporting path valid.
-4. **Backwards compatibility**: no breaking change to a published relation interface,
-   config key, or action without a track/major bump and a migration note.
-5. **Provenance**: promoted revision is traceable to a tagged commit and the CI run
-   that produced it.
-
-### A.7 Proposed default thresholds
-
-These are starting points. Adjust per charm risk profile and record the chosen values.
-
-| Parameter                              | Proposed default |
-|----------------------------------------|------------------|
-| Unit line coverage floor               | 80% |
-| Bake time on `edge` before `beta`      | None; nightly run + automated security checks must pass |
-| Bake time on `beta` before `candidate` | None |
-| Soak on `candidate` before `stable`    | 14 days, zero regressions |
-| Single-charm soak duration             | >= 24h |
-| Min distinct revisions before `stable` | >= 1 that fully cleared `candidate` |
-| Blocking security severities           | critical, high |
-| Blocking bug severities for promotion  | critical, high |
-| Upgrade matrix span                    | previous stable, previous beta/candidate, rollback |
-
-### A.8 Worked example (slurm-charms commands)
-
-Mapping the gates onto the repository's actual toolchain (`justfile` + `repository.py`):
-
-```bash
-# Static checks (edge gate)
-just check                       # fmt + lint + typecheck
-
-# Unit tests + coverage (edge gate)
-just unit                        # runs repository.py unit -> cover/coverage.xml
-
-# Integration smoke / full (edge / beta gate)
-just integration -- --charm-base=ubuntu@26.04
-
-# HA / resilience (beta gate)
-just integration -- --charm-base=ubuntu@26.04 --run-high-availability
-
-# Stage + pack a single charm (build reproducibility)
-just repo stage slurmctld --clean
-
-# Nightly coverage / quality scan (TICS) already runs weekly in CI
-```
-
-Channel mapping already implemented in CI:
-
-- Merge to `main`      -> auto-release to `latest/edge`.
-- Merge to `track/*`   -> auto-release to `<track>/edge`.
-- `edge -> beta -> candidate -> stable` promotions are performed against the gates
-  above (currently manual on Charmhub; a guarded promotion workflow is the *target*).
-
-### A.9 Promotion checklist (copy per promotion)
-
-```
-Charm: __________________   Revision: ______   From: ______  ->  To: ______  Track: ______
-
-[ ] Static checks pass (just check)
-[ ] Unit tests pass; coverage >= threshold (just unit)
-[ ] Integration suite green on all supported bases (just integration)
-[ ] All actions and relations exercised
-[ ] Upgrade test(s) pass for target channel
-[ ] HA / functional / BDD pass (beta+)
-[ ] Non-functional: scale + soak + perf baseline (candidate+)
-[ ] Security / CVE scan clean of critical/high (beta+)
-[ ] Docs updated / published; release notes drafted/finalized
-[ ] Backwards-compat / interface-stability reviewed
-[ ] Bake/soak time satisfied for target channel
-[ ] Approvals: maintainer ______  release owner ______  (candidate+)
-```
-
 ## Specification Part B: Charmed HPC solution promotion criteria (multi-charm)
 
 This part defines what must be true to promote the **Charmed HPC solution** (a set
@@ -332,14 +262,29 @@ when the charms are deployed together.
 | Component            | Repository                       | Role in the solution |
 |----------------------|----------------------------------|----------------------|
 | Slurm charms         | `canonical/slurm-charms`         | Workload manager: `slurmctld` (hub), `slurmd`, `slurmdbd`, `sackd`, `slurmrestd` |
-| Filesystem charms    | `canonical/filesystem-charms`    | Shared filesystem provider/consumer (NFS, CephFS) mounted on cluster nodes |
+| Filesystem charms    | `canonical/filesystem-charms`    | Shared filesystem provider/consumer (NFS, CephFS, Lustre) mounted on cluster nodes |
 | SSSD                 | `canonical/sssd-operator`        | Directory-backed authentication / identity across cluster nodes |
 | Apptainer            | `canonical/apptainer-operator`   | OCI/container runtime integration for compute nodes |
+| OpenSSH               | `canonical/openssh-operator`     | SSH access to login nodes |
 
-Supporting (not deployed as part of the solution, but used to validate it):
+External integrations (not part of the solution's own bundle):
+
+| Component | Repository                       | Role in the integration |
+|-----------|-----------------------------------|--------------------------|
+| MySQL     | `canonical/mysql-operator`       | Accounting database backing `slurmdbd`; required |
+| COS       | `canonical/cos-lite`             | Metrics, alerting, dashboards, and logs via `cos-agent`; required |
+| Authentik | `canonical/authentik-server-operator` | Upstream OIDC/LDAP identity provider backing SSSD and/or OpenSSH; optional |
+
+COS and Authentik both run cross-model on **Kubernetes** rather than alongside the
+machine-based solution, so both are validated starting at the `candidate` gate
+(B.3.3) rather than `edge`/`beta`. Authentik is additionally optional
+(`authentik-server` + `authentik-worker`, plus `authentik-ldap-outpost` for LDAP).
+
+Supporting (not deployed as part of the solution, but relied on to build or validate it):
 
 | Component               | Repository                          | Use |
 |-------------------------|-------------------------------------|-----|
+| Charm libraries         | `canonical/charmed-hpc-libs`        | Shared building blocks (interfaces, conditions framework) that constituent charms are built against |
 | Benchmarks / validation | `canonical/charmed-hpc-benchmarks`  | Non-functional and end-to-end cluster validation |
 | BDD step library        | `canonical/pytest-jubilant-bdd`     | Reusable Gherkin step handlers for functional gates |
 | Documentation           | `canonical/charmed-hpc-docs`        | Solution documentation and release notes |
@@ -357,6 +302,9 @@ Supporting (not deployed as part of the solution, but used to validate it):
 
    filesystem (server) ──mount_info──► filesystem-client ──mount──► compute/login nodes
    sssd ──► identity/auth on login + compute nodes
+   openssh ──► SSH access on login nodes
+
+   authentik-server ──oidc/ldap──► sssd and openssh (external integration, cross-model)
 ```
 
 Key cross-charm surfaces to validate:
@@ -365,6 +313,8 @@ Key cross-charm surfaces to validate:
 - `slurmdbd` <-> `mysql` (accounting database).
 - filesystem mount flowing through to compute/login nodes.
 - SSSD-provided identity usable by Slurm job submission.
+- OpenSSH-provided SSH access on login nodes, integrated with SSSD-backed identity.
+- Authentik as an external IdP integration for SSSD/OpenSSH, where required.
 - Apptainer as the OCI runtime for containerized jobs.
 - `slurmctld` -> COS for integrated observability.
 
@@ -385,9 +335,12 @@ cross-charm gates for `X` in this document pass. For example, the solution canno
   each constituent charm that composes that solution release.
 - All constituents in a given solution release must target a **compatible Ubuntu base**
   and be validated against the **same Juju version(s)**.
-- Optional/experimental components (e.g. Apptainer, if a deployment does not use
-  containers) may lag, but must be explicitly marked optional in the matrix and excluded
-  from the required set for that channel.
+- Optional/experimental constituents (e.g. Apptainer, if a deployment does not use
+  containers) may lag, but must be explicitly marked optional in the matrix and
+  excluded from the required set for that channel.
+- External integrations (MySQL, COS, Authentik) are recorded separately and aren't
+  subject to the weakest-link rule; each entry records the validated version and
+  confirms the integration is established.
 
 A minimal matrix template:
 
@@ -399,7 +352,13 @@ Component          Track        Channel      Revision
 slurm-charms       __________   __________   __________
 filesystem-charms  __________   __________   __________
 sssd-operator      __________   __________   __________
+openssh-operator   __________   __________   __________
 apptainer-operator __________   __________   __________   (optional: yes/no)
+
+External integrations:
+mysql              __________   __________   __________
+cos                __________   __________   __________
+authentik-server   __________   __________   __________   (Kubernetes; cross-model; optional: yes/no)
 ```
 
 ### B.3 Cross-charm gates per channel
@@ -411,7 +370,7 @@ Legend: **[CI]** automated; **[MAN]** manual; **[CI/MAN]** CI evidence, human re
 
 - [CI] Every required charm is available at `edge` on a compatible track.
 - [CI] Full-stack bundle deploys and reaches `active/idle`: `slurmctld` + `slurmd` +
-  `slurmdbd` (+`mysql`) + `sackd` + filesystem + SSSD on the target base.
+  `slurmdbd` (+`mysql`) + `sackd` + filesystem + SSSD + OpenSSH on the target base.
 - [CI] Core Slurm relations settle (all four `slurmctld` relations, `slurmdbd:database`).
 
 #### B.3.2 Solution `beta`
@@ -423,16 +382,26 @@ Requires solution `edge`, plus:
   (`sackd`/`slurmrestd` -> `slurmctld` -> `slurmd`) and confirm it completes.
 - [CI] Shared filesystem is mounted on compute + login nodes and is writable from a job.
 - [CI] SSSD-provided identity can submit and own a job.
-- [CI] **HA / resilience**: `slurmctld` leader failover with in-flight/queued jobs
-  preserved, recovering to healthy.
+- [CI] A user can SSH into a login node via OpenSSH, authenticated against
+  SSSD-provided identity.
+- [CI] **HA / resilience (cross-charm)**: with the full stack live, a running job
+  survives an `slurmctld` leader failover and completes, keeping access to the shared
+  filesystem and SSSD-provided identity throughout. (Per-charm `slurmctld` failover
+  recovery is covered by the single-charm HA gate in A.4.2; this gate adds the
+  cross-charm dimension of a job in flight across the wider stack.)
 - [CI] **Functional / BDD** acceptance of primary cluster journeys *(target,
   `pytest-jubilant-bdd`)*, e.g.:
   - submit and complete an `sbatch` job that reads/writes the shared filesystem,
   - run a containerized job via Apptainer,
   - authenticate a user through SSSD and run a job as that user,
+  - SSH into a login node via OpenSSH and submit a job from an interactive shell,
   - query cluster state through `slurmrestd`.
-- [CI] **Automated security check**: CVE/dependency scan across the set with **no
-  unresolved critical/high** findings.
+- [CI] **Composed-set security check**: no **critical/high** issues that appear only
+  when the charms are deployed together, e.g. dependency version conflicts across the
+  assembled bundle, credentials or secrets exposed over cross-charm relations, or
+  network surfaces opened by the composed topology. (Per-charm CVE/dependency scans
+  are inherited via the weakest-link rule; this gate covers only what a single charm's
+  scan cannot see.)
 - [MAN] Bundle/deployment documentation drafted for any changed topology or relation.
 - [CI] **Nightly run** passes, including a full-stack run and the scheduled HA job
   *(no fixed bake time)*.
@@ -442,6 +411,9 @@ Requires solution `edge`, plus:
 Requires solution `beta`, plus:
 
 - [CI] All required charms at `candidate` (weakest-link rule).
+- [CI] If Authentik is in scope: it reaches `active/idle` on Kubernetes, and a user
+  provisioned there can authenticate via SSSD or OpenSSH and submit a job *(target,
+  `pytest-jubilant-bdd`)*.
 - [CI] **Cross-charm upgrade / refresh** in the supported order *(target)*: refresh the
   solution from the previous solution release to the candidate, one component at a time,
   asserting the cluster stays functional (jobs continue to schedule) throughout, then
@@ -453,25 +425,29 @@ Requires solution `beta`, plus:
   and dashboards; a log sink receives cluster logs.
 - [CI] **Non-functional at solution scale** *(target, via `charmed-hpc-benchmarks`)*:
   - multi-node scale-out of `slurmd` and scale-in,
-  - `slurmctld` **HA failover** with jobs surviving the failover,
-  - cluster **soak >= 48h** with steady job submission and no leaks/flaps,
+  - `slurmctld` **HA failover under load**: with steady multi-node job submission,
+    failover preserves in-flight and queued jobs (the B.3.2 job-survival check
+    repeated at scale),
+  - cluster **soak >= 24h** with steady job submission and no leaks/flaps *(depending on resource availability)*,
   - performance baseline (e.g. scheduling throughput, job turnaround) within budget.
 - [MAN] Solution documentation complete (deploy, integrate, operate, upgrade).
 - [MAN] Solution release notes drafted, listing the component version matrix.
-- [MAN] Security review across the set clean of critical/high.
+- [MAN] Security review of the composed set: sign off the cross-charm findings from
+  the `beta` check and confirm no critical/high issues in the assembled deployment.
 
 #### B.3.4 Solution `stable`
 
 Requires solution `candidate`, plus:
 
 - [MAN] All required charms at `stable` (weakest-link rule).
-- [MAN] **Soak on solution `candidate`:** >= **14 days**, zero regressions, no new
+- [MAN] **Soak on solution `candidate`:** >= **7 days**, zero regressions, no new
   critical/high defects (proposed default).
 - [CI] Upgrade from the **current solution `stable`** to the new release verified end to
   end (data + accounting DB + config preserved; jobs unaffected) *(target)*.
 - [CI/MAN] The frozen component version matrix is reproducible and each revision matches
   what soaked on `candidate`.
-- [MAN] Security sign-off across the set.
+- [MAN] Final security sign-off for the composed deployment (no unresolved
+  critical/high across the assembled set).
 - [MAN] Solution documentation and release notes published (including the version
   matrix and a supported upgrade path from the previous solution `stable`).
 - [MAN] Approval recorded by the solution/release owner **and** each component
@@ -484,7 +460,7 @@ Requires solution `candidate`, plus:
 |---------------|--------------------------------|
 | Scale         | Validated `slurmd` scale-out and scale-in at the target node count for the release |
 | HA / failover | `slurmctld` leader failover with in-flight/queued jobs preserved |
-| Soak          | >= 48h at candidate with continuous job submission; no leaks, restarts, or status flaps |
+| Soak          | >= 24h at candidate with continuous job submission; no leaks, restarts, or status flaps |
 | Performance   | Baseline captured via `charmed-hpc-benchmarks`; regression budget agreed by maintainers |
 | Observability | Metrics, alerts, dashboards, and logs verified through COS |
 | Security      | No unresolved critical/high across any constituent artifact or dependency |
@@ -501,48 +477,6 @@ Requires solution `candidate`, plus:
 
 `candidate` and `stable` promotions require the solution/release owner plus the
 maintainers of every required component.
-
-### B.6 Solution promotion checklist (copy per promotion)
-
-```
-Solution release: __________   From: ______  ->  To: ______   Base: ______   Juju: ______
-
-Weakest-link:
-[ ] All required charms available at target channel on compatible tracks
-[ ] Component version matrix recorded
-
-Deploy & integrate:
-[ ] Full-stack bundle reaches active/idle
-[ ] Core Slurm relations + slurmdbd:database settle
-[ ] Shared filesystem mounted + writable from a job
-[ ] SSSD identity can submit/own a job
-[ ] Apptainer container job runs (if in scope)
-
-Functional (beta+):
-[ ] End-to-end BDD acceptance journeys pass
-[ ] slurmctld HA failover with job survival
-[ ] slurmrestd query path verified
-
-Upgrade & compatibility (candidate+):
-[ ] Cross-charm upgrade in supported order keeps cluster functional
-[ ] Rollback path verified
-[ ] Interface-compatibility matrix across the set passes
-[ ] Integrated observability (metrics/alerts/dashboards/logs) verified
-
-Non-functional (candidate+):
-[ ] Scale out/in verified
-[ ] Soak >= 48h clean
-[ ] Performance baseline within budget
-
-Hygiene:
-[ ] Security scan clean of critical/high across the set (beta+)
-[ ] Solution docs + release notes published/drafted per channel
-[ ] Nightly run passing (beta+); soak time satisfied for target channel
-
-Approvals (candidate+):
-[ ] Solution/release owner ______
-[ ] Component maintainers: slurm ____  filesystem ____  sssd ____  apptainer ____
-```
 
 ## References
 
