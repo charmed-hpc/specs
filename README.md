@@ -4,8 +4,6 @@ This repository hosts the development specifications for [Charmed HPC](https://g
 
 To ask a question or start a discussion about a particular specification, please [open an issue](https://github.com/canonical/hpc-specs/issues/new?title=ISSUE+TITLE&body=*Please+describe+your+issue*).
 
-## Specifications
+## Specification Index
 
 See [`AGENTS.md`](AGENTS.md) for the full index of specifications, their summaries, dependencies, and the conventions used in this repository.
-
-> **Note:** This repository records *what was decided*, not *what has been built*. To check whether a spec has been implemented, consult the relevant charm repository (e.g. `slurm-charms`, `charmed-hpc-libs`).
